@@ -1,0 +1,214 @@
+import Foundation
+import SwiftData
+
+/// Orquesta el envio de mensajes (texto + vision) y la generacion de imagenes,
+/// persistiendo todo en el dispositivo (SwiftData). Sin backend: el provider habla
+/// directo con el modelo. browse=true busca en la web; image=foto adjunta (vision).
+@MainActor
+final class ChatViewModel: ObservableObject {
+    @Published var isStreaming = false
+    @Published var statusText: String?
+    @Published var errorText: String?
+    private var task: Task<Void, Never>?
+
+    func send(_ text: String, conversation: Conversation, provider: ProviderConfig,
+              context: ModelContext, browse: Bool = false, image: Data? = nil) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let hasImage = !(image?.isEmpty ?? true)
+        guard (!trimmed.isEmpty || hasImage), !isStreaming else { return }
+        let isFirstTurn = conversation.messages.isEmpty
+        errorText = nil
+
+        let userText = trimmed.isEmpty && hasImage ? "Describe esta imagen." : trimmed
+        let userMsg = Message(role: "user", text: userText)
+        if hasImage { userMsg.imageData = image! }
+        userMsg.conversation = conversation
+        conversation.messages.append(userMsg)
+        context.insert(userMsg)
+
+        let assistant = Message(role: "assistant", text: "")
+        assistant.conversation = conversation
+        conversation.messages.append(assistant)
+        context.insert(assistant)
+
+        if conversation.title == "Nueva conversación" {
+            conversation.title = String(userText.prefix(40))
+        }
+        try? context.save()
+
+        let history = conversation.sortedMessages
+            .filter { $0.role != "assistant" || !$0.text.isEmpty }
+            .map { ChatTurn(role: $0.role, content: $0.text,
+                            images: ($0.role == "user" && !$0.imageData.isEmpty) ? [$0.imageData] : []) }
+
+        let prov = ProviderFactory.make(kind: provider.kind)
+        let model = conversation.model
+        let baseURL = provider.baseURL
+        let apiKey = provider.apiKey
+
+        isStreaming = true
+        task = Task { [weak self] in
+            guard let self else { return }
+            var turns = history
+            turns.insert(ChatTurn(role: "system", content: ResponseStyle.current.systemPrompt), at: 0)
+            do {
+                if WeatherService.isWeatherQuery(userText) && !hasImage {
+                    self.statusText = "Consultando el tiempo…"
+                    if let snap = await WeatherService.fetch(query: userText) {
+                        assistant.weather = snap
+                        try? context.save()
+                        turns.insert(ChatTurn(role: "system", content: WeatherService.summaryContext(snap)), at: 0)
+                    } else {
+                        self.statusText = "No ubiqué ese lugar; respondo sin tarjeta…"
+                    }
+                } else if CurrencyService.isCurrencyQuery(userText) && !hasImage {
+                    self.statusText = "Consultando divisas…"
+                    if let p = CurrencyService.parse(userText),
+                       let snap = await CurrencyService.fetch(amount: p.amount, from: p.from, to: p.to) {
+                        assistant.currency = snap
+                        try? context.save()
+                        turns.insert(ChatTurn(role: "system", content: CurrencyService.summaryContext(snap)), at: 0)
+                    } else {
+                        self.statusText = "No pude obtener la tasa; respondo sin tarjeta…"
+                    }
+                } else if browse {
+                    self.statusText = "Buscando en la web…"
+                    let sources = await WebSearchService.enriched(query: userText, limit: 5)
+                    assistant.sources = sources
+                    if sources.isEmpty {
+                        self.statusText = "Sin resultados; respondo sin fuentes…"
+                    } else {
+                        self.statusText = "Leyendo \(sources.count) fuentes…"
+                        turns.insert(ChatTurn(role: "system",
+                                              content: WebSearchService.contextBlock(query: userText, sources: sources)),
+                                     at: 0)
+                    }
+                    try? context.save()
+                }
+                self.statusText = nil
+                let stream = prov.stream(turns: turns, model: model, baseURL: baseURL, apiKey: apiKey)
+                let genStart = Date()
+                var usagePrompt = 0, usageCompletion = 0
+                for try await ev in stream {
+                    if Task.isCancelled { break }
+                    switch ev {
+                    case .delta(let t): assistant.text += t
+                    case .reasoning(let r): assistant.reasoning += r
+                    case .usage(let p, let c): usagePrompt = p; usageCompletion = c
+                    case .done: break
+                    }
+                }
+                let elapsed = Date().timeIntervalSince(genStart)
+                let outTok = usageCompletion > 0 ? usageCompletion : max(1, assistant.text.count / 4)
+                let inTok = usagePrompt > 0 ? usagePrompt : max(1, turns.reduce(0) { $0 + $1.content.count } / 4)
+                assistant.promptTokens = inTok
+                assistant.completionTokens = outTok
+                assistant.tokensPerSecond = elapsed > 0 ? Double(outTok) / elapsed : 0
+                if !assistant.sources.isEmpty {
+                    assistant.citations = CitationReference.parse(text: assistant.text, sources: assistant.sources)
+                }
+                if isFirstTurn {
+                    self.generateTitle(conversation: conversation, provider: provider, context: context, firstUser: userText)
+                }
+            } catch {
+                if !Task.isCancelled {
+                    self.errorText = error.localizedDescription
+                    if assistant.text.isEmpty { assistant.text = "⚠️ " + error.localizedDescription }
+                }
+            }
+            self.statusText = nil
+            try? context.save()
+            self.isStreaming = false
+        }
+    }
+
+    func generateImage(prompt: String, conversation: Conversation, provider: ProviderConfig,
+                       context: ModelContext, imageModel: String) {
+        let trimmed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, !isStreaming else { return }
+        errorText = nil
+
+        let userMsg = Message(role: "user", text: trimmed)
+        userMsg.conversation = conversation
+        conversation.messages.append(userMsg)
+        context.insert(userMsg)
+
+        let assistant = Message(role: "assistant", text: "")
+        assistant.conversation = conversation
+        conversation.messages.append(assistant)
+        context.insert(assistant)
+
+        if conversation.title == "Nueva conversación" {
+            conversation.title = String(trimmed.prefix(40))
+        }
+        try? context.save()
+
+        let baseURL = provider.baseURL
+        let apiKey = provider.apiKey
+        isStreaming = true
+        statusText = "Generando imagen…"
+        task = Task { [weak self] in
+            guard let self else { return }
+            do {
+                let data = try await ImageGenerationService.generate(prompt: trimmed, model: imageModel,
+                                                                     baseURL: baseURL, apiKey: apiKey)
+                if !Task.isCancelled { assistant.imageData = data }
+            } catch {
+                if !Task.isCancelled {
+                    self.errorText = error.localizedDescription
+                    assistant.text = "⚠️ " + error.localizedDescription
+                }
+            }
+            self.statusText = nil
+            try? context.save()
+            self.isStreaming = false
+        }
+    }
+
+    /// Título inteligente: llamada mínima al modelo tras el primer
+    /// intercambio. Fire-and-forget; el prefijo del user queda como fallback.
+    private func generateTitle(conversation: Conversation, provider: ProviderConfig, context: ModelContext, firstUser: String) {
+        let model = conversation.model
+        let base = provider.baseURL
+        let kind = provider.kind
+        let api = provider.apiKey
+        Task { @MainActor in
+            let prompt = "Resume el tema de este mensaje en un título de 3 a 5 palabras, en su mismo idioma, sin comillas ni punto final. Mensaje: \(firstUser.prefix(300))"
+            var title = ""
+            do {
+                for try await ev in ProviderFactory.make(kind: kind).stream(turns: [ChatTurn(role: "user", content: prompt)], model: model, baseURL: base, apiKey: api) {
+                    if case .delta(let t) = ev { title += t }
+                }
+            } catch { return }
+            title = title.trimmingCharacters(in: .whitespacesAndNewlines)
+                .trimmingCharacters(in: CharacterSet(charactersIn: "\"'."))
+            if !title.isEmpty, title.count <= 60, conversation.title != title {
+                conversation.title = title
+                try? context.save()
+            }
+        }
+    }
+
+    /// Regenera la última respuesta: borra el último turno user+assistant y lo
+    /// re-envía (reutiliza send: clima/browse/imagen). Conserva si usó browse.
+    func regenerate(conversation: Conversation, provider: ProviderConfig, context: ModelContext) {
+        guard !isStreaming else { return }
+        let msgs = conversation.sortedMessages
+        guard let ui = msgs.lastIndex(where: { $0.role == "user" }) else { return }
+        let userMsg = msgs[ui]
+        let text = userMsg.text
+        let img = userMsg.imageData.isEmpty ? nil : userMsg.imageData
+        let assistants = msgs[(ui + 1)...].filter { $0.role == "assistant" }
+        let hadBrowse = assistants.contains { !$0.sources.isEmpty }
+        for a in assistants { context.delete(a) }
+        context.delete(userMsg)
+        try? context.save()
+        send(text, conversation: conversation, provider: provider, context: context, browse: hadBrowse, image: img)
+    }
+
+    func stop() {
+        task?.cancel()
+        isStreaming = false
+        statusText = nil
+    }
+}
