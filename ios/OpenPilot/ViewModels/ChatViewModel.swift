@@ -206,6 +206,22 @@ final class ChatViewModel: ObservableObject {
         send(text, conversation: conversation, provider: provider, context: context, browse: hadBrowse, image: img)
     }
 
+    /// Edita un mensaje del usuario ya enviado: borra ese turno y todo lo
+    /// posterior, y re-envía el texto nuevo (reutiliza send). Conserva browse/imagen.
+    func editAndResend(_ message: Message, newText: String, conversation: Conversation,
+                       provider: ProviderConfig, context: ModelContext) {
+        guard !isStreaming else { return }
+        let trimmed = newText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let msgs = conversation.sortedMessages
+        guard let idx = msgs.firstIndex(where: { $0.id == message.id }) else { return }
+        let img = message.imageData.isEmpty ? nil : message.imageData
+        let hadBrowse = msgs[idx...].contains { $0.role == "assistant" && !$0.sources.isEmpty }
+        for m in msgs[idx...] { context.delete(m) }
+        try? context.save()
+        send(trimmed, conversation: conversation, provider: provider, context: context, browse: hadBrowse, image: img)
+    }
+
     func stop() {
         task?.cancel()
         isStreaming = false

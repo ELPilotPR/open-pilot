@@ -23,6 +23,8 @@ struct ChatView: View {
     @State private var probingImage = false
     @ObservedObject private var voice = VoiceManager.shared
     @State private var dictationPrefix = ""
+    @State private var editingMessage: Message?
+    @State private var editText = ""
     @FocusState private var composerFocused: Bool
     @AppStorage("selectedProviderID") private var selectedProviderID = "casa"
     @AppStorage("selectedModel") private var selectedModel = "swift-iq3_s"
@@ -116,6 +118,9 @@ struct ChatView: View {
             }
             .ignoresSafeArea()
         }
+        .sheet(item: $editingMessage) { m in
+            editSheet(m)
+        }
     }
 
     /// Hook de verificación visual (SOLO con argumento -demoWeather/-demoCurrency al
@@ -126,6 +131,7 @@ struct ChatView: View {
         if args.contains("-demoReasoning") { demoReasoning(); return }
         if args.contains("-demoMarkdown") { demoMarkdown(); return }
         if args.contains("-demoStream") { demoStream(); return }
+        if args.contains("-demoEdit") { demoEdit(); return }
         if args.contains("-demoError") { demoError(); return }
         let prompt: String?
         if args.contains("-demoWeather") { prompt = "¿Cómo está el tiempo en Racine WI?" }
@@ -190,6 +196,26 @@ struct ChatView: View {
 
     /// Demo OFFLINE de markdown enriquecido: encabezados, listas anidadas, blockquote,
     /// tabla, regla horizontal y codigo con resaltado de sintaxis. Sin red ni modelo.
+    /// Abre el editor sobre un mensaje demo para verificar la UI de edición.
+    private func demoEdit() {
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            let conv: Conversation
+            if let c = current { conv = c }
+            else {
+                let c = Conversation(title: "Demo edit", providerID: activeProvider?.id ?? "casa", model: activeModel)
+                context.insert(c); current = c; conv = c
+            }
+            let u = Message(role: "user", text: "¿Cuál es la capital de Francia?")
+            u.conversation = conv; conv.messages.append(u); context.insert(u)
+            let a = Message(role: "assistant", text: "La capital de Francia es París.")
+            a.conversation = conv; conv.messages.append(a); context.insert(a)
+            try? context.save()
+            try? await Task.sleep(nanoseconds: 400_000_000)
+            startEdit(u)
+        }
+    }
+
     /// Simula streaming offline para verificar el cursor ▍ y el ocultado de acciones.
     private func demoStream() {
         Task { @MainActor in
@@ -419,7 +445,8 @@ struct ChatView: View {
                     LazyVStack(alignment: .leading, spacing: 24) {
                         ForEach(Array(messages.enumerated()), id: \.element.id) { idx, m in
                             MessageRow(message: m, isActive: vm.isStreaming && idx == messages.count - 1,
-                                       onRegenerate: (!vm.isStreaming && m.role == "assistant" && idx == messages.count - 1) ? { regenerate() } : nil)
+                                       onRegenerate: (!vm.isStreaming && m.role == "assistant" && idx == messages.count - 1) ? { regenerate() } : nil,
+                                       onEdit: (!vm.isStreaming && m.role == "user") ? { startEdit(m) } : nil)
                                 .id(m.id)
                         }
                         Color.clear.frame(height: 1).id("bottom")
@@ -562,6 +589,47 @@ struct ChatView: View {
     private func regenerate() {
         guard let p = activeProvider, let c = current else { return }
         vm.regenerate(conversation: c, provider: p, context: context)
+    }
+
+    // MARK: - Editar mensaje del usuario
+
+    private func startEdit(_ m: Message) {
+        editText = m.text
+        editingMessage = m
+        Haptic.light()
+    }
+
+    @ViewBuilder
+    private func editSheet(_ m: Message) -> some View {
+        NavigationStack {
+            TextEditor(text: $editText)
+                .font(.body)
+                .foregroundStyle(OP.textPrimary)
+                .scrollContentBackground(.hidden)
+                .background(OP.canvas)
+                .padding(12)
+                .navigationTitle(T("Edit message", "Editar mensaje"))
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button(T("Cancel", "Cancelar")) { editingMessage = nil }
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button(T("Submit", "Enviar")) { submitEdit(m) }
+                            .fontWeight(.semibold)
+                            .tint(OP.accent)
+                            .disabled(editText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    }
+                }
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    private func submitEdit(_ m: Message) {
+        guard let p = activeProvider, let c = current else { editingMessage = nil; return }
+        let text = editText
+        editingMessage = nil
+        vm.editAndResend(m, newText: text, conversation: c, provider: p, context: context)
     }
 
     private func send() {

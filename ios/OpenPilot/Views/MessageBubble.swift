@@ -6,6 +6,7 @@ struct MessageRow: View {
     let message: Message
     var isActive: Bool = false
     var onRegenerate: (() -> Void)? = nil
+    var onEdit: (() -> Void)? = nil
     @State private var copied = false
     @State private var saved = false
     @State private var appeared = false
@@ -41,6 +42,15 @@ struct MessageRow: View {
                             .textSelection(.enabled)
                     }
                 }
+                .contentShape(RoundedRectangle(cornerRadius: 20))
+                .onTapGesture { onEdit?() }
+                .contextMenu {
+                    if let onEdit {
+                        Button { onEdit() } label: { Label(T("Edit", "Editar"), systemImage: "pencil") }
+                    }
+                }
+                .accessibilityLabel(T("Your message", "Tu mensaje"))
+                .accessibilityHint(T("Tap to edit and resend", "Toca para editar y reenviar"))
             }
         } else {
             HStack(alignment: .top, spacing: 12) {
