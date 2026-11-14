@@ -16,8 +16,11 @@ struct SidebarView: View {
     @State private var showRename = false
 
     private var filtered: [Conversation] {
-        search.isEmpty ? conversations
-            : conversations.filter { $0.title.localizedCaseInsensitiveContains(search) }
+        guard !search.isEmpty else { return conversations }
+        return conversations.filter { c in
+            c.title.localizedCaseInsensitiveContains(search)
+                || c.messages.contains { $0.text.localizedCaseInsensitiveContains(search) }
+        }
     }
 
     private var sections: [(String, [Conversation])] {
