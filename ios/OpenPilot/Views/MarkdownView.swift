@@ -88,6 +88,7 @@ private struct ProseView: View {
                             .font(.body)
                             .foregroundStyle(OP.textPrimary)
                             .lineSpacing(3)
+                            .fixedSize(horizontal: false, vertical: true)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
@@ -97,6 +98,7 @@ private struct ProseView: View {
                 .font(.body)
                 .foregroundStyle(OP.textPrimary)
                 .lineSpacing(3)
+                .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .tint(OP.accent)
         }
