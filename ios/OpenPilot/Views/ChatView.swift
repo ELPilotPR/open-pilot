@@ -121,6 +121,7 @@ struct ChatView: View {
         let args = CommandLine.arguments
         if args.contains("-demoCitations") { demoCitations(); return }
         if args.contains("-demoReasoning") { demoReasoning(); return }
+        if args.contains("-demoMarkdown") { demoMarkdown(); return }
         let prompt: String?
         if args.contains("-demoWeather") { prompt = "¿Cómo está el tiempo en Racine WI?" }
         else if args.contains("-demoCurrency") { prompt = "cuánto es 100 dólares en euros" }
@@ -176,6 +177,60 @@ struct ChatView: View {
             let a = Message(role: "assistant", text: "17 × 23 = **391**.")
             a.reasoning = "Descompongo 23 en 20 + 3. Primero 17 × 20 = 340. Luego 17 × 3 = 51. Sumo 340 + 51 = 391. Verifico por otra vía: 17 × 23 = 17 × (25 − 2) = 425 − 34 = 391. Coincide."
             a.promptTokens = 42; a.completionTokens = 96; a.tokensPerSecond = 31.2
+            context.insert(u); context.insert(a)
+            conv.messages.append(u); conv.messages.append(a)
+            try? context.save()
+        }
+    }
+
+    /// Demo OFFLINE de markdown enriquecido: encabezados, listas anidadas, blockquote,
+    /// tabla, regla horizontal y codigo con resaltado de sintaxis. Sin red ni modelo.
+    private func demoMarkdown() {
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            let conv: Conversation
+            if let c = current { conv = c }
+            else {
+                let c = Conversation(title: "Demo markdown", providerID: activeProvider?.id ?? "casa", model: activeModel)
+                context.insert(c); current = c; conv = c
+            }
+            let u = Message(role: "user", text: "Muéstrame un ejemplo con formato completo")
+            u.createdAt = Date().addingTimeInterval(-2)
+            let md = [
+                "# Guía rápida",
+                "",
+                "Párrafo con **negrita**, *cursiva*, `código inline` y un [enlace](https://example.com). También una cita [1].",
+                "",
+                "## Listas anidadas",
+                "- Frutas",
+                "  - Manzana",
+                "  - Pera",
+                "- Verduras",
+                "  1. Zanahoria",
+                "  2. Guisantes",
+                "",
+                "> Una cita en bloque para resaltar una idea importante.",
+                "",
+                "| Lenguaje | Tipado | Año |",
+                "|---|---|---|",
+                "| Swift | Estático | 2014 |",
+                "| Python | Dinámico | 1991 |",
+                "",
+                "---",
+                "",
+                "```swift",
+                "// Comentario de ejemplo",
+                "func saludo(_ nombre: String) -> String {",
+                "    let mensaje = \"Hola, \" + nombre",
+                "    return mensaje",
+                "}",
+                "```",
+            ].joined(separator: "\n")
+            let a = Message(role: "assistant", text: md)
+            let srcs = [WebSource(title: "Documento de ejemplo", url: "https://example.com/doc", snippet: "Fuente de demostración.")]
+            a.sources = srcs
+            a.citations = CitationReference.parse(text: a.text, sources: srcs)
+            a.promptTokens = 120; a.completionTokens = 210; a.tokensPerSecond = 29.8
             context.insert(u); context.insert(a)
             conv.messages.append(u); conv.messages.append(a)
             try? context.save()
