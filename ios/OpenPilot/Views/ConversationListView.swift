@@ -14,6 +14,8 @@ struct SidebarView: View {
     @State private var renamingConv: Conversation?
     @State private var renameText = ""
     @State private var showRename = false
+    @State private var deletingConv: Conversation?
+    @State private var showDeleteConfirm = false
 
     private var filtered: [Conversation] {
         guard !search.isEmpty else { return conversations }
@@ -94,6 +96,12 @@ struct SidebarView: View {
         .sheet(item: $sharePayload) { payload in
             ShareSheet(items: [payload.text])
         }
+        .alert(T("Delete chat?", "¿Eliminar conversación?"), isPresented: $showDeleteConfirm, presenting: deletingConv) { c in
+            Button(T("Delete", "Eliminar"), role: .destructive) { delete(c) }
+            Button(T("Cancel", "Cancelar"), role: .cancel) { deletingConv = nil }
+        } message: { _ in
+            Text(T("This conversation will be permanently deleted.", "Esta conversación se eliminará permanentemente."))
+        }
         .alert(T("Rename conversation", "Renombrar conversación"), isPresented: $showRename) {
             TextField(T("Title", "Título"), text: $renameText)
             Button(T("Cancel", "Cancelar"), role: .cancel) { renamingConv = nil }
@@ -118,7 +126,7 @@ struct SidebarView: View {
             Button { startRename(conv) } label: {
                 Label(T("Rename", "Renombrar"), systemImage: "pencil")
             }
-            Button(role: .destructive) { delete(conv) } label: {
+            Button(role: .destructive) { deletingConv = conv; showDeleteConfirm = true } label: {
                 Label(T("Delete", "Eliminar"), systemImage: "trash")
             }
         }
