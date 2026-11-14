@@ -7,6 +7,7 @@ struct SettingsView: View {
     @Query(sort: \ProviderConfig.createdAt) private var providers: [ProviderConfig]
     @AppStorage("imageModel") private var imageModel = "dall-e-3"
     @AppStorage("responseStyle") private var responseStyle = "conciso"
+    @AppStorage("appearanceMode") private var appearanceMode = "auto"
 
     var body: some View {
         List {
@@ -20,6 +21,18 @@ struct SettingsView: View {
                 Text(T("Language", "Idioma"))
             } footer: {
                 Text(T("Follows your device language by default.", "Sigue el idioma de tu dispositivo por defecto."))
+            }
+
+            Section {
+                Picker(T("Appearance", "Apariencia"), selection: $appearanceMode) {
+                    Text(T("Automatic", "Automático")).tag("auto")
+                    Text(T("Light", "Claro")).tag("light")
+                    Text(T("Dark", "Oscuro")).tag("dark")
+                }
+            } header: {
+                Text(T("Appearance", "Apariencia"))
+            } footer: {
+                Text(T("Follows your device setting by default.", "Sigue la configuración de tu dispositivo por defecto."))
             }
 
             Section {

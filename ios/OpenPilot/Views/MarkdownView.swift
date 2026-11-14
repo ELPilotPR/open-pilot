@@ -319,7 +319,7 @@ struct CodeBlockView: View {
 /// Resaltado de sintaxis ligero y on-device (sin dependencias): comentarios, strings,
 /// numeros, palabras clave y tipos. Colores adaptativos light/dark estilo Xcode.
 enum SyntaxHighlighter {
-    private static let cComment = OP.dyn("#8A8A8A", "#7F8C98")
+    private static let cComment = OP.dyn("#6A737D", "#7F8C98")
     private static let cString  = OP.dyn("#C41A16", "#FC6A5D")
     private static let cKeyword = OP.dyn("#AD3DA4", "#FF7AB2")
     private static let cNumber  = OP.dyn("#1C00CF", "#D0BF69")

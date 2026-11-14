@@ -8,6 +8,7 @@ struct RootView: View {
     @State private var current: Conversation?
     @State private var sidebarOpen = false
     @State private var showSettings = false
+    @AppStorage("appearanceMode") private var appearanceMode = "auto"
 
     var body: some View {
         ZStack(alignment: .leading) {
@@ -31,11 +32,20 @@ struct RootView: View {
                 .transition(.move(edge: .leading))
             }
         }
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(resolvedColorScheme)
         .sheet(isPresented: $showSettings) {
             NavigationStack { SettingsView() }
         }
         .task { seedIfNeeded() }
+    }
+
+    /// Auto = sigue al sistema; claro/oscuro = override explícito del usuario.
+    private var resolvedColorScheme: ColorScheme? {
+        switch appearanceMode {
+        case "light": return .light
+        case "dark": return .dark
+        default: return nil
+        }
     }
 
     /// Primer arranque: siembra el server de casa para que funcione out-of-the-box.

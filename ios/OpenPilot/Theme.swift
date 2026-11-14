@@ -33,7 +33,7 @@ enum OP {
     static let textPrimary   = dyn("#0D0D0D", "#ECECEC")   // text-primary
     static let textSecondary = dyn("#5D5D5D", "#CDCDCD")   // text-secondary
     static let textTertiary  = dyn("#8F8F8F", "#AFAFAF")   // text-tertiary
-    static let accent        = dyn("#0285FF", "#48AAFF")   // icon-accent
+    static let accent        = dyn("#0B6BCB", "#48AAFF")   // icon-accent (más oscuro en claro: mejor contraste WCAG)
     static let composerBg    = dyn("#FFFFFF", "#303030")
     static let border        = dyn("#E8E8E8", "#424242")   // border-default
     static let sendBg        = dyn("#0D0D0D", "#FFFFFF")
