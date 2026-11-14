@@ -447,9 +447,12 @@ struct ChatView: View {
     private var greeting: some View {
         VStack(spacing: 0) {
             Spacer()
-            Image(systemName: "sparkle")
-                .font(.system(size: 34)).foregroundStyle(OP.textPrimary)
-                .padding(.bottom, 14)
+            Image("Logo")
+                .resizable().scaledToFit()
+                .frame(width: 84, height: 84)
+                .clipShape(RoundedRectangle(cornerRadius: 19, style: .continuous))
+                .shadow(color: .black.opacity(0.18), radius: 8, y: 3)
+                .padding(.bottom, 16)
             Text(T("How can I help you?", "¿En qué puedo ayudarte?"))
                 .font(.title2.weight(.semibold)).foregroundStyle(OP.textPrimary)
             Spacer()
