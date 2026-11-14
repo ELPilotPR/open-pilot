@@ -57,7 +57,7 @@ struct MessageRow: View {
                     } else if message.text.isEmpty && message.reasoning.isEmpty && message.weatherData.isEmpty && message.currencyData.isEmpty {
                         TypingIndicator().padding(.vertical, 4)
                     } else if !message.text.isEmpty {
-                        MarkdownView(text: message.text, sources: message.sources)
+                        MarkdownView(text: message.text + (isActive ? " ▍" : ""), sources: message.sources)
                             .textSelection(.enabled)
                     }
                     if !message.sources.isEmpty { sourcesView }
@@ -65,8 +65,8 @@ struct MessageRow: View {
                         if message.completionTokens > 0 { metricsView }
                         Spacer(minLength: 0)
                         if let onRegenerate { regenerateButton(onRegenerate) }
-                        if !message.text.isEmpty { speakButton }
-                        if !message.text.isEmpty { copyButton }
+                        if !message.text.isEmpty && !isActive { speakButton }
+                        if !message.text.isEmpty && !isActive { copyButton }
                     }
                 }
             }

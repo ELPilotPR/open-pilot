@@ -125,6 +125,7 @@ struct ChatView: View {
         if args.contains("-demoCitations") { demoCitations(); return }
         if args.contains("-demoReasoning") { demoReasoning(); return }
         if args.contains("-demoMarkdown") { demoMarkdown(); return }
+        if args.contains("-demoStream") { demoStream(); return }
         if args.contains("-demoError") { demoError(); return }
         let prompt: String?
         if args.contains("-demoWeather") { prompt = "¿Cómo está el tiempo en Racine WI?" }
@@ -189,6 +190,34 @@ struct ChatView: View {
 
     /// Demo OFFLINE de markdown enriquecido: encabezados, listas anidadas, blockquote,
     /// tabla, regla horizontal y codigo con resaltado de sintaxis. Sin red ni modelo.
+    /// Simula streaming offline para verificar el cursor ▍ y el ocultado de acciones.
+    private func demoStream() {
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            let conv: Conversation
+            if let c = current { conv = c }
+            else {
+                let c = Conversation(title: "Demo stream", providerID: activeProvider?.id ?? "casa", model: activeModel)
+                context.insert(c); current = c; conv = c
+            }
+            let u = Message(role: "user", text: "Describe el mar al amanecer")
+            u.conversation = conv; conv.messages.append(u); context.insert(u)
+            let a = Message(role: "assistant", text: "")
+            a.conversation = conv; conv.messages.append(a); context.insert(a)
+            try? context.save()
+            vm.isStreaming = true
+            let full = "El mar en calma al amanecer tiene un color azul profundo que se va tiñendo de oro a medida que el sol asoma sobre el horizonte. Las olas llegan suaves a la orilla, dejando una estela de espuma que brilla un instante antes de deshacerse sobre la arena."
+            var acc = ""
+            for word in full.split(separator: " ") {
+                acc += (acc.isEmpty ? "" : " ") + word
+                a.text = acc
+                try? await Task.sleep(nanoseconds: 70_000_000)
+            }
+            vm.isStreaming = false
+            try? context.save()
+        }
+    }
+
     private func demoMarkdown() {
         Task { @MainActor in
             try? await Task.sleep(nanoseconds: 500_000_000)
