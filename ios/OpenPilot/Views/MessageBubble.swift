@@ -9,6 +9,7 @@ struct MessageRow: View {
     @State private var copied = false
     @State private var saved = false
     @State private var appeared = false
+    @State private var reasoningExpanded = false
     @ObservedObject private var voice = VoiceManager.shared
 
     var body: some View {
@@ -91,17 +92,29 @@ struct MessageRow: View {
         }
     }
 
+    /// Razonamiento en vivo: se expande solo mientras el modelo "piensa"
+    /// (streaming activo y aún sin respuesta) y se colapsa al empezar el texto.
+    private var isThinking: Bool { isActive && message.text.isEmpty }
+
     private var reasoningView: some View {
-        DisclosureGroup {
+        DisclosureGroup(isExpanded: $reasoningExpanded) {
             Text(message.reasoning)
                 .font(.caption).foregroundStyle(OP.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.top, 4)
         } label: {
-            Label("Pensamiento", systemImage: "brain")
-                .font(.caption.weight(.medium)).foregroundStyle(OP.textSecondary)
+            HStack(spacing: 6) {
+                Image(systemName: "brain")
+                    .symbolEffect(.pulse, options: .repeating, isActive: isThinking)
+                Text(isThinking ? "Pensando…" : "Razonamiento")
+            }
+            .font(.caption.weight(.medium)).foregroundStyle(OP.textSecondary)
         }
         .tint(OP.textSecondary)
+        .onChange(of: isThinking) { _, thinking in
+            withAnimation(.easeInOut(duration: 0.25)) { reasoningExpanded = thinking }
+        }
+        .onAppear { reasoningExpanded = isThinking }
     }
 
     private var metricsView: some View {

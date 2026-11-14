@@ -120,6 +120,7 @@ struct ChatView: View {
     private func runDemoIfNeeded() {
         let args = CommandLine.arguments
         if args.contains("-demoCitations") { demoCitations(); return }
+        if args.contains("-demoReasoning") { demoReasoning(); return }
         let prompt: String?
         if args.contains("-demoWeather") { prompt = "¿Cómo está el tiempo en Racine WI?" }
         else if args.contains("-demoCurrency") { prompt = "cuánto es 100 dólares en euros" }
@@ -153,6 +154,28 @@ struct ChatView: View {
             a.sources = srcs
             a.citations = CitationReference.parse(text: a.text, sources: srcs)
             a.promptTokens = 320; a.completionTokens = 48; a.tokensPerSecond = 27.4
+            context.insert(u); context.insert(a)
+            conv.messages.append(u); conv.messages.append(a)
+            try? context.save()
+        }
+    }
+
+    /// Demo OFFLINE de razonamiento: inyecta reasoning + respuesta para verificar
+    /// el bloque colapsable "Razonamiento" sin red ni modelo.
+    private func demoReasoning() {
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            let conv: Conversation
+            if let c = current { conv = c }
+            else {
+                let c = Conversation(title: "Demo razonamiento", providerID: activeProvider?.id ?? "casa", model: activeModel)
+                context.insert(c); current = c; conv = c
+            }
+            let u = Message(role: "user", text: "¿Cuánto es 17 × 23?")
+            u.createdAt = Date().addingTimeInterval(-2)
+            let a = Message(role: "assistant", text: "17 × 23 = **391**.")
+            a.reasoning = "Descompongo 23 en 20 + 3. Primero 17 × 20 = 340. Luego 17 × 3 = 51. Sumo 340 + 51 = 391. Verifico por otra vía: 17 × 23 = 17 × (25 − 2) = 425 − 34 = 391. Coincide."
+            a.promptTokens = 42; a.completionTokens = 96; a.tokensPerSecond = 31.2
             context.insert(u); context.insert(a)
             conv.messages.append(u); conv.messages.append(a)
             try? context.save()
