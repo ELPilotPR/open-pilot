@@ -10,6 +10,10 @@ struct SidebarView: View {
     var onSettings: () -> Void
     @Query(sort: \Conversation.createdAt, order: .reverse) private var conversations: [Conversation]
     @State private var search = ""
+    @State private var sharePayload: SharePayload?
+    @State private var renamingConv: Conversation?
+    @State private var renameText = ""
+    @State private var showRename = false
 
     private var filtered: [Conversation] {
         search.isEmpty ? conversations
@@ -84,6 +88,14 @@ struct SidebarView: View {
             }
         }
         .background(OP.sidebar.ignoresSafeArea())
+        .sheet(item: $sharePayload) { payload in
+            ShareSheet(items: [payload.text])
+        }
+        .alert(T("Rename conversation", "Renombrar conversación"), isPresented: $showRename) {
+            TextField(T("Title", "Título"), text: $renameText)
+            Button(T("Cancel", "Cancelar"), role: .cancel) { renamingConv = nil }
+            Button(T("Save", "Guardar")) { confirmRename() }
+        }
     }
 
     private func convRow(_ conv: Conversation) -> some View {
@@ -97,6 +109,12 @@ struct SidebarView: View {
         }
         .buttonStyle(.plain)
         .contextMenu {
+            Button { share(conv) } label: {
+                Label(T("Share", "Compartir"), systemImage: "square.and.arrow.up")
+            }
+            Button { startRename(conv) } label: {
+                Label(T("Rename", "Renombrar"), systemImage: "pencil")
+            }
             Button(role: .destructive) { delete(conv) } label: {
                 Label(T("Delete", "Eliminar"), systemImage: "trash")
             }
@@ -108,4 +126,53 @@ struct SidebarView: View {
         context.delete(c); try? context.save()
         if current?.id == c.id { current = nil }
     }
+
+    private func share(_ c: Conversation) {
+        sharePayload = SharePayload(text: exportText(c))
+        Haptic.light()
+    }
+
+    private func startRename(_ c: Conversation) {
+        renamingConv = c
+        renameText = c.title
+        showRename = true
+    }
+
+    private func confirmRename() {
+        if let c = renamingConv {
+            c.title = renameText.trimmingCharacters(in: .whitespacesAndNewlines)
+            try? context.save()
+        }
+        renamingConv = nil
+    }
+
+    /// Exporta la conversación como texto plano legible para compartir.
+    private func exportText(_ c: Conversation) -> String {
+        let title = c.title.isEmpty ? T("New chat", "Nueva conversación") : c.title
+        let df = DateFormatter(); df.dateStyle = .medium; df.timeStyle = .short
+        var lines = [title, String(repeating: "─", count: 24), ""]
+        for m in c.sortedMessages {
+            let who = m.role == "user" ? T("You", "Tú") : T("Assistant", "Asistente")
+            lines.append("\(who) · \(df.string(from: m.createdAt))")
+            lines.append(m.text.isEmpty ? "—" : m.text)
+            lines.append("")
+        }
+        lines.append(T("Shared from Open Pilot", "Compartido desde Open Pilot"))
+        return lines.joined(separator: "\n")
+    }
+}
+
+/// Payload identifiable para presentar el share sheet sin carreras de estado.
+struct SharePayload: Identifiable {
+    let id = UUID()
+    let text: String
+}
+
+/// Share sheet nativo (UIActivityViewController) para exportar conversaciones.
+struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+    func updateUIViewController(_ vc: UIActivityViewController, context: Context) {}
 }
