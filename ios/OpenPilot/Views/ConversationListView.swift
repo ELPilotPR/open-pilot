@@ -29,14 +29,14 @@ struct SidebarView: View {
             else if c.createdAt >= weekAgo { semana.append(c) }
             else { antes.append(c) }
         }
-        return [("Hoy", hoy), ("Ayer", ayer), ("Últimos 7 días", semana), ("Anteriores", antes)].filter { !$0.1.isEmpty }
+        return [(T("Today", "Hoy"), hoy), (T("Yesterday", "Ayer"), ayer), (T("Last 7 days", "Últimos 7 días"), semana), (T("Earlier", "Anteriores"), antes)].filter { !$0.1.isEmpty }
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass").foregroundStyle(OP.textTertiary)
-                TextField("Buscar", text: $search).foregroundStyle(OP.textPrimary).tint(OP.accent)
+                TextField(T("Search", "Buscar"), text: $search).foregroundStyle(OP.textPrimary).tint(OP.accent)
                 if !search.isEmpty {
                     Button { search = "" } label: {
                         Image(systemName: "xmark.circle.fill").foregroundStyle(OP.textTertiary)
@@ -47,7 +47,7 @@ struct SidebarView: View {
             .padding(12)
 
             Button { Haptic.light(); current = nil; close() } label: {
-                Label("Nuevo chat", systemImage: "square.and.pencil")
+                Label(T("New chat", "Nuevo chat"), systemImage: "square.and.pencil")
                     .font(.body.weight(.medium))
                     .foregroundStyle(OP.textPrimary)
                     .frame(maxWidth: .infinity, alignment: .leading).padding(12)
@@ -60,7 +60,7 @@ struct SidebarView: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 2) {
                     if filtered.isEmpty {
-                        Text(search.isEmpty ? "Aún no hay conversaciones" : "Sin resultados")
+                        Text(search.isEmpty ? T("No conversations yet", "Aún no hay conversaciones") : T("No results", "Sin resultados"))
                             .font(.footnote).foregroundStyle(OP.textTertiary)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.horizontal, 12).padding(.top, 16)
@@ -79,7 +79,7 @@ struct SidebarView: View {
             Spacer()
             Divider().overlay(OP.border)
             Button(action: onSettings) {
-                Label("Settings", systemImage: "gearshape").foregroundStyle(OP.textPrimary)
+                Label(T("Settings", "Ajustes"), systemImage: "gearshape").foregroundStyle(OP.textPrimary)
                     .frame(maxWidth: .infinity, alignment: .leading).padding(14)
             }
         }
@@ -98,7 +98,7 @@ struct SidebarView: View {
         .buttonStyle(.plain)
         .contextMenu {
             Button(role: .destructive) { delete(conv) } label: {
-                Label("Eliminar", systemImage: "trash")
+                Label(T("Delete", "Eliminar"), systemImage: "trash")
             }
         }
     }

@@ -10,9 +10,9 @@ struct ProviderEditorView: View {
 
     var body: some View {
         Form {
-            Section("Proveedor") {
-                TextField("Nombre", text: $provider.name)
-                Picker("Tipo", selection: $provider.kind) {
+            Section(T("Provider", "Proveedor")) {
+                TextField(T("Name", "Nombre"), text: $provider.name)
+                Picker(T("Type", "Tipo"), selection: $provider.kind) {
                     Text("OpenAI-compatible").tag("openai")
                     Text("Anthropic").tag("anthropic")
                 }
@@ -20,7 +20,7 @@ struct ProviderEditorView: View {
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .keyboardType(.URL)
-                SecureField("API Key (opcional)", text: $provider.apiKey)
+                SecureField(T("API Key (optional)", "API Key (opcional)"), text: $provider.apiKey)
             }
 
             Section {
@@ -30,10 +30,10 @@ struct ProviderEditorView: View {
                 .onDelete { provider.models.remove(atOffsets: $0) }
 
                 HStack {
-                    TextField("Añadir modelo (ej. qwen-plus)", text: $newModel)
+                    TextField(T("Add model (e.g. qwen-plus)", "Añadir modelo (ej. qwen-plus)"), text: $newModel)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
-                    Button("Añadir") { addModel() }
+                    Button(T("Add", "Añadir")) { addModel() }
                         .disabled(newModel.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
 
@@ -41,7 +41,7 @@ struct ProviderEditorView: View {
                     if testing {
                         ProgressView()
                     } else {
-                        Label("Probar y descubrir modelos", systemImage: "antenna.radiowaves.left.and.right")
+                        Label(T("Test & discover models", "Probar y descubrir modelos"), systemImage: "antenna.radiowaves.left.and.right")
                     }
                 }
                 .disabled(testing)
@@ -49,21 +49,21 @@ struct ProviderEditorView: View {
                     Text(r).font(.caption).foregroundStyle(.secondary)
                 }
             } header: {
-                Text("Modelos")
+                Text(T("Models", "Modelos"))
             } footer: {
-                Text("Escribe el modelo a mano (p. ej. qwen-plus, qwen-max) o usa Probar para descubrirlos con GET /models. Qwen/DashScope: https://dashscope.aliyuncs.com/compatible-mode/v1")
+                Text(T("Type the model by hand (e.g. qwen-plus, qwen-max) or use Test to discover them via GET /models. Qwen/DashScope: https://dashscope.aliyuncs.com/compatible-mode/v1", "Escribe el modelo a mano (p. ej. qwen-plus, qwen-max) o usa Probar para descubrirlos con GET /models. Qwen/DashScope: https://dashscope.aliyuncs.com/compatible-mode/v1"))
             }
 
             Section {
-                Picker("Generación de imágenes", selection: $provider.imageCapability) {
+                Picker(T("Image generation", "Generación de imágenes"), selection: $provider.imageCapability) {
                     Text("Auto").tag("auto")
-                    Text("Sí").tag("yes")
+                    Text(T("Yes", "Sí")).tag("yes")
                     Text("No").tag("no")
                 }
             } header: {
-                Text("Imágenes")
+                Text(T("Images", "Imágenes"))
             } footer: {
-                Text("Auto: Qwen/DashScope y OpenAI sí; un server local de texto no. Pon «Sí» si tu servidor genera imágenes, «No» para avisar al pedir una imagen.")
+                Text(T("Auto: Qwen/DashScope and OpenAI yes; a local text server no. Set Yes if your server generates images, No to warn when an image is requested.", "Auto: Qwen/DashScope y OpenAI sí; un server local de texto no. Pon «Sí» si tu servidor genera imágenes, «No» para avisar al pedir una imagen."))
             }
         }
         .navigationTitle(provider.name)
@@ -89,7 +89,7 @@ struct ProviderEditorView: View {
             do {
                 let ms = try await p.models(baseURL: base, apiKey: key)
                 for m in ms where !provider.models.contains(m) { provider.models.append(m) }
-                testResult = "OK \(ms.count) modelo(s): " + ms.joined(separator: ", ")
+                testResult = T("OK \(ms.count) model(s): ", "OK \(ms.count) modelo(s): ") + ms.joined(separator: ", ")
                 try? context.save()
             } catch {
                 testResult = "Error: " + error.localizedDescription

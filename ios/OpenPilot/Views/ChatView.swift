@@ -67,7 +67,7 @@ struct ChatView: View {
             if imageMode && probingImage {
                 HStack(spacing: 8) {
                     ProgressView().controlSize(.small)
-                    Text("Comprobando si este modelo genera imágenes…")
+                    Text(T("Checking if this model generates images…", "Comprobando si este modelo genera imágenes…"))
                         .font(.caption).foregroundStyle(OP.textSecondary)
                     Spacer()
                 }
@@ -199,7 +199,7 @@ struct ChatView: View {
     private var imageWarning: some View {
         HStack(spacing: 8) {
             Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
-            Text("Este modelo no soporta generación de imágenes. Cambia a Qwen (arriba) o actívalo en Ajustes del proveedor.")
+            Text(T("This model does not support image generation. Switch to Qwen (above) or enable it in the provider settings.", "Este modelo no soporta generación de imágenes. Cambia a Qwen (arriba) o actívalo en Ajustes del proveedor."))
                 .font(.caption).foregroundStyle(OP.textSecondary)
             Spacer()
         }
@@ -240,7 +240,7 @@ struct ChatView: View {
                 }
             }
             Divider()
-            Button("Ajustes de modelos…", action: onSettings)
+            Button(T("Model settings…", "Ajustes de modelos…"), action: onSettings)
         } label: {
             HStack(spacing: 4) {
                 Text(activeModel).font(.headline).lineLimit(1)
@@ -268,16 +268,11 @@ struct ChatView: View {
             Image(systemName: "sparkle")
                 .font(.system(size: 34)).foregroundStyle(OP.textPrimary)
                 .padding(.bottom, 14)
-            Text("¿En qué puedo ayudarte?")
+            Text(T("How can I help you?", "¿En qué puedo ayudarte?"))
                 .font(.title2.weight(.semibold)).foregroundStyle(OP.textPrimary)
             Spacer()
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
-                ForEach(chatSuggestions) { s in
-                    SuggestionCard(s: s) { applySuggestion(s) }
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 24)
+            LanguageToggle()
+                .padding(.bottom, 28)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .contentShape(Rectangle())
@@ -329,9 +324,9 @@ struct ChatView: View {
         HStack(alignment: .bottom, spacing: 6) {
             Menu {
                 PhotosPicker(selection: $photoItem, matching: .images) {
-                    Label("Elegir foto", systemImage: "photo.on.rectangle")
+                    Label(T("Choose photo", "Elegir foto"), systemImage: "photo.on.rectangle")
                 }
-                Button { showCamera = true } label: { Label("Cámara", systemImage: "camera") }
+                Button { showCamera = true } label: { Label(T("Camera", "Cámara"), systemImage: "camera") }
             } label: {
                 Image(systemName: "plus").font(.system(size: 18, weight: .medium))
                     .foregroundStyle(OP.textPrimary)
@@ -378,7 +373,7 @@ struct ChatView: View {
                 }
                 .buttonStyle(ScaleButtonStyle())
             }
-            TextField(imageMode ? "Describe la imagen que quieres…" : "Pregunta lo que quieras",
+            TextField(imageMode ? T("Describe the image you want…", "Describe la imagen que quieres…") : T("Ask anything", "Pregunta lo que quieras"),
                       text: $input, axis: .vertical)
                 .lineLimit(1...6)
                 .focused($composerFocused)
@@ -413,14 +408,6 @@ struct ChatView: View {
     private var canSend: Bool {
         let hasContent = !input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || attachedImage != nil
         return hasContent && activeProvider != nil
-    }
-
-    private func applySuggestion(_ s: Suggestion) {
-        Haptic.light()
-        browse = s.browse
-        imageMode = s.imageMode
-        input = s.prompt
-        if activeProvider != nil { send() } else { composerFocused = true }
     }
 
     private func probeIfNeeded() {

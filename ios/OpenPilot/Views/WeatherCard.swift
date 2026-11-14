@@ -39,12 +39,12 @@ struct WeatherCard: View {
             if let d = focusedDay { todayStats(d) }
             dailyStrip
             Picker("", selection: $focusMode) {
-                Text("Temperatura").tag(Mode.temp)
-                Text("Lluvia").tag(Mode.precip)
+                Text(T("Temperature", "Temperatura")).tag(Mode.temp)
+                Text(T("Rain", "Lluvia")).tag(Mode.precip)
             }
             .pickerStyle(.segmented)
             hourlyChart
-            Text("Fuente: Open-Meteo")
+            Text(T("Source: Open-Meteo", "Fuente: Open-Meteo"))
                 .font(.caption2).foregroundStyle(OP.textTertiary)
         }
         .padding(14)
@@ -94,7 +94,7 @@ struct WeatherCard: View {
                     .foregroundStyle(OP.textPrimary)
                 Text(WMO.describe(snap.current.code, isDay: snap.current.isDay).desc)
                     .font(.subheadline).foregroundStyle(OP.textSecondary)
-                Text("Sensación \(temp(snap.current.feelsLike))°")
+                Text(T("Feels like", "Sensación") + " \(temp(snap.current.feelsLike))°")
                     .font(.caption).foregroundStyle(OP.textTertiary)
             }
             Spacer()
@@ -109,14 +109,14 @@ struct WeatherCard: View {
     private func todayStats(_ d: WeatherSnapshot.Day) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 16) {
-                stat("Máx", "\(temp(d.high))°")
-                stat("Mín", "\(temp(d.low))°")
-                stat("Viento", "\(WMO.windDir(snap.current.windDirection)) \(wind(snap.current.windSpeed)) \(windUnit)")
-                stat("Lluvia", "\(d.precip)%")
+                stat(T("High", "Máx"), "\(temp(d.high))°")
+                stat(T("Low", "Mín"), "\(temp(d.low))°")
+                stat(T("Wind", "Viento"), "\(WMO.windDir(snap.current.windDirection)) \(wind(snap.current.windSpeed)) \(windUnit)")
+                stat(T("Rain", "Lluvia"), "\(d.precip)%")
             }
             HStack(spacing: 16) {
-                stat("Humedad", "\(snap.current.humidity)%")
-                if !d.sunset.isEmpty { stat("Ocaso", d.sunset) }
+                stat(T("Humidity", "Humedad"), "\(snap.current.humidity)%")
+                if !d.sunset.isEmpty { stat(T("Sunset", "Ocaso"), d.sunset) }
             }
         }
     }

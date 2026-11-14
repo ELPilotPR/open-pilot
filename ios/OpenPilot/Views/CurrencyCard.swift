@@ -27,7 +27,7 @@ struct CurrencyCard: View {
 
     private var header: some View {
         HStack {
-            Label("Conversión de divisas", systemImage: "arrow.left.arrow.right.circle.fill")
+            Label(T("Currency conversion", "Conversión de divisas"), systemImage: "arrow.left.arrow.right.circle.fill")
                 .font(.footnote.weight(.semibold)).foregroundStyle(OP.textSecondary)
             Spacer()
             Text(snap.date).font(.caption2).foregroundStyle(OP.textTertiary)
@@ -62,7 +62,7 @@ struct CurrencyCard: View {
 
     private var sparkline: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Últimos 30 días").font(.caption2).foregroundStyle(OP.textTertiary)
+            Text(T("Last 30 days", "Últimos 30 días")).font(.caption2).foregroundStyle(OP.textTertiary)
             Chart(snap.history, id: \.date) { p in
                 AreaMark(x: .value("Fecha", p.date), y: .value("Tasa", p.value))
                     .foregroundStyle(OP.accent.opacity(0.12))

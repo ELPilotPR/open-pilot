@@ -11,6 +11,18 @@ struct SettingsView: View {
     var body: some View {
         List {
             Section {
+                Picker(T("Language", "Idioma"), selection: langBinding) {
+                    Text(T("Automatic", "Automático")).tag(Optional<AppLang>.none)
+                    Text("English").tag(Optional<AppLang>.some(.en))
+                    Text("Español").tag(Optional<AppLang>.some(.es))
+                }
+            } header: {
+                Text(T("Language", "Idioma"))
+            } footer: {
+                Text(T("Follows your device language by default.", "Sigue el idioma de tu dispositivo por defecto."))
+            }
+
+            Section {
                 ForEach(providers) { p in
                     NavigationLink {
                         ProviderEditorView(provider: p)
@@ -23,56 +35,61 @@ struct SettingsView: View {
                 }
                 .onDelete(perform: delete)
             } header: {
-                Text("Proveedores")
+                Text(T("Providers", "Proveedores"))
             } footer: {
-                Text("Se guardan solo en este iPhone. La app conecta directo al modelo, sin backend. Agrega cualquier API OpenAI-compatible (tu server local, OpenAI, OpenRouter…) o Anthropic.")
+                Text(T("Stored only on this iPhone. The app connects directly to the model, no backend. Add any OpenAI-compatible API (your local server, OpenAI, OpenRouter…) or Anthropic.", "Se guardan solo en este iPhone. La app conecta directo al modelo, sin backend. Agrega cualquier API OpenAI-compatible (tu server local, OpenAI, OpenRouter…) o Anthropic."))
             }
 
             Section {
-                TextField("Modelo de imágenes", text: $imageModel)
+                TextField(T("Image model", "Modelo de imágenes"), text: $imageModel)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
             } header: {
-                Text("Imágenes")
+                Text(T("Images", "Imágenes"))
             } footer: {
-                Text("Qwen/DashScope: usa wan2.7-image automáticamente (incluido en tu plan). OpenAI: dall-e-3 o gpt-image-1. Para analizar fotos se usa el modelo de chat con visión (gpt-4o, qwen-vl).")
+                Text(T("Qwen/DashScope: uses wan2.7-image automatically (included in your plan). OpenAI: dall-e-3 or gpt-image-1. To analyze photos it uses the vision chat model (gpt-4o, qwen-vl).", "Qwen/DashScope: usa wan2.7-image automáticamente (incluido en tu plan). OpenAI: dall-e-3 o gpt-image-1. Para analizar fotos se usa el modelo de chat con visión (gpt-4o, qwen-vl)."))
             }
 
             Section {
-                Picker("Estilo de respuesta", selection: $responseStyle) {
+                Picker(T("Response style", "Estilo de respuesta"), selection: $responseStyle) {
                     ForEach(ResponseStyle.allCases) { s in
                         Text(s.label).tag(s.rawValue)
                     }
                 }
                 .pickerStyle(.segmented)
             } header: {
-                Text("Respuestas")
+                Text(T("Responses", "Respuestas"))
             } footer: {
-                Text("Conciso: respuesta directa y corta. Detallado: análisis a fondo.")
+                Text(T("Concise: short, direct answers. Detailed: in-depth analysis.", "Conciso: respuesta directa y corta. Detallado: análisis a fondo."))
             }
 
             Section {
                 Button { addProvider() } label: {
-                    Label("Agregar API OpenAI-compatible", systemImage: "plus")
+                    Label(T("Add OpenAI-compatible API", "Agregar API OpenAI-compatible"), systemImage: "plus")
                 }
             }
         }
         .scrollContentBackground(.hidden)
         .background(OP.canvas)
         .tint(OP.accent)
-        .navigationTitle("Settings")
+        .navigationTitle(T("Settings", "Ajustes"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button("Listo") { dismiss() }
+                Button(T("Done", "Listo")) { dismiss() }
             }
         }
+    }
+
+    private var langBinding: Binding<AppLang?> {
+        Binding(get: { LanguageManager.shared.override },
+                set: { LanguageManager.shared.override = $0 })
     }
 
     private func addProvider() {
         let p = ProviderConfig(
             id: "api-" + UUID().uuidString.prefix(6).lowercased(),
-            name: "Nueva API", kind: "openai", baseURL: "https://", models: []
+            name: T("New API", "Nueva API"), kind: "openai", baseURL: "https://", models: []
         )
         context.insert(p)
         try? context.save()

@@ -84,7 +84,7 @@ struct MessageRow: View {
                 saved = true
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { saved = false }
             } label: {
-                Label(saved ? "Guardada" : "Guardar", systemImage: saved ? "checkmark" : "square.and.arrow.down")
+                Label(saved ? T("Saved", "Guardada") : T("Save", "Guardar"), systemImage: saved ? "checkmark" : "square.and.arrow.down")
                     .font(.caption.weight(.medium))
                     .foregroundStyle(saved ? OP.success : OP.textSecondary)
             }
@@ -106,7 +106,7 @@ struct MessageRow: View {
             HStack(spacing: 6) {
                 Image(systemName: "brain")
                     .symbolEffect(.pulse, options: .repeating, isActive: isThinking)
-                Text(isThinking ? "Pensando…" : "Razonamiento")
+                Text(isThinking ? T("Thinking…", "Pensando…") : T("Reasoning", "Razonamiento"))
             }
             .font(.caption.weight(.medium)).foregroundStyle(OP.textSecondary)
         }

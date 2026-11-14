@@ -8,9 +8,9 @@ enum ResponseStyle: String, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
-        case .conciso: return "Conciso"
-        case .normal: return "Normal"
-        case .detallado: return "Detallado"
+        case .conciso: return T("Concise", "Conciso")
+        case .normal: return T("Normal", "Normal")
+        case .detallado: return T("Detailed", "Detallado")
         }
     }
 
