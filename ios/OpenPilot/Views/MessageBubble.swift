@@ -138,6 +138,7 @@ struct MessageRow: View {
             Image(systemName: copied ? "checkmark" : "doc.on.doc")
                 .font(.system(size: 13))
                 .foregroundStyle(copied ? OP.success : OP.textSecondary)
+                .accessibilityLabel(T("Copy", "Copiar"))
         }
         .buttonStyle(ScaleButtonStyle())
     }
@@ -147,6 +148,7 @@ struct MessageRow: View {
             Image(systemName: "arrow.clockwise")
                 .font(.system(size: 13))
                 .foregroundStyle(OP.textSecondary)
+                .accessibilityLabel(T("Regenerate", "Regenerar"))
         }
         .buttonStyle(ScaleButtonStyle())
     }
@@ -160,6 +162,7 @@ struct MessageRow: View {
             Image(systemName: speaking ? "stop.circle" : "speaker.wave.2")
                 .font(.system(size: 13))
                 .foregroundStyle(speaking ? OP.accent : OP.textSecondary)
+                .accessibilityLabel(speaking ? T("Stop speaking", "Dejar de leer") : T("Read aloud", "Leer en voz alta"))
         }
         .buttonStyle(ScaleButtonStyle())
     }

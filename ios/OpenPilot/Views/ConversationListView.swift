@@ -88,7 +88,7 @@ struct SidebarView: View {
 
     private func convRow(_ conv: Conversation) -> some View {
         Button { Haptic.selection(); current = conv; close() } label: {
-            Text(conv.title).lineLimit(1).font(.subheadline)
+            Text(conv.title.isEmpty ? T("New chat", "Nueva conversación") : conv.title).lineLimit(1).font(.subheadline)
                 .foregroundStyle(OP.textPrimary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 12).padding(.vertical, 10)

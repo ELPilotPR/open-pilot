@@ -31,7 +31,7 @@ final class ChatViewModel: ObservableObject {
         conversation.messages.append(assistant)
         context.insert(assistant)
 
-        if conversation.title == "Nueva conversación" {
+        if conversation.title.isEmpty {
             conversation.title = String(userText.prefix(40))
         }
         try? context.save()
@@ -53,32 +53,32 @@ final class ChatViewModel: ObservableObject {
             turns.insert(ChatTurn(role: "system", content: ResponseStyle.current.systemPrompt), at: 0)
             do {
                 if WeatherService.isWeatherQuery(userText) && !hasImage {
-                    self.statusText = "Consultando el tiempo…"
+                    self.statusText = T("Checking the weather…", "Consultando el tiempo…")
                     if let snap = await WeatherService.fetch(query: userText) {
                         assistant.weather = snap
                         try? context.save()
                         turns.insert(ChatTurn(role: "system", content: WeatherService.summaryContext(snap)), at: 0)
                     } else {
-                        self.statusText = "No ubiqué ese lugar; respondo sin tarjeta…"
+                        self.statusText = T("Couldn't find that place; answering without a card…", "No ubiqué ese lugar; respondo sin tarjeta…")
                     }
                 } else if CurrencyService.isCurrencyQuery(userText) && !hasImage {
-                    self.statusText = "Consultando divisas…"
+                    self.statusText = T("Checking exchange rates…", "Consultando divisas…")
                     if let p = CurrencyService.parse(userText),
                        let snap = await CurrencyService.fetch(amount: p.amount, from: p.from, to: p.to) {
                         assistant.currency = snap
                         try? context.save()
                         turns.insert(ChatTurn(role: "system", content: CurrencyService.summaryContext(snap)), at: 0)
                     } else {
-                        self.statusText = "No pude obtener la tasa; respondo sin tarjeta…"
+                        self.statusText = T("Couldn't get the rate; answering without a card…", "No pude obtener la tasa; respondo sin tarjeta…")
                     }
                 } else if browse {
-                    self.statusText = "Buscando en la web…"
+                    self.statusText = T("Searching the web…", "Buscando en la web…")
                     let sources = await WebSearchService.enriched(query: userText, limit: 5)
                     assistant.sources = sources
                     if sources.isEmpty {
-                        self.statusText = "Sin resultados; respondo sin fuentes…"
+                        self.statusText = T("No results; answering without sources…", "Sin resultados; respondo sin fuentes…")
                     } else {
-                        self.statusText = "Leyendo \(sources.count) fuentes…"
+                        self.statusText = T("Reading \(sources.count) sources…", "Leyendo \(sources.count) fuentes…")
                         turns.insert(ChatTurn(role: "system",
                                               content: WebSearchService.contextBlock(query: userText, sources: sources)),
                                      at: 0)
@@ -113,7 +113,7 @@ final class ChatViewModel: ObservableObject {
             } catch {
                 if !Task.isCancelled {
                     self.errorText = error.localizedDescription
-                    if assistant.text.isEmpty { assistant.text = "⚠️ " + error.localizedDescription }
+                    if assistant.text.isEmpty { context.delete(assistant) }
                 }
             }
             self.statusText = nil
@@ -138,7 +138,7 @@ final class ChatViewModel: ObservableObject {
         conversation.messages.append(assistant)
         context.insert(assistant)
 
-        if conversation.title == "Nueva conversación" {
+        if conversation.title.isEmpty {
             conversation.title = String(trimmed.prefix(40))
         }
         try? context.save()
@@ -146,7 +146,7 @@ final class ChatViewModel: ObservableObject {
         let baseURL = provider.baseURL
         let apiKey = provider.apiKey
         isStreaming = true
-        statusText = "Generando imagen…"
+        statusText = T("Generating image…", "Generando imagen…")
         task = Task { [weak self] in
             guard let self else { return }
             do {
@@ -156,7 +156,7 @@ final class ChatViewModel: ObservableObject {
             } catch {
                 if !Task.isCancelled {
                     self.errorText = error.localizedDescription
-                    assistant.text = "⚠️ " + error.localizedDescription
+                    if assistant.imageData.isEmpty { context.delete(assistant) }
                 }
             }
             self.statusText = nil

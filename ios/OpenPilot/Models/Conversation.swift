@@ -13,7 +13,7 @@ final class Conversation {
     @Relationship(deleteRule: .cascade, inverse: \Message.conversation)
     var messages: [Message]
 
-    init(title: String = "Nueva conversación", providerID: String = "", model: String = "") {
+    init(title: String = "", providerID: String = "", model: String = "") {
         self.id = UUID()
         self.title = title
         self.createdAt = Date()

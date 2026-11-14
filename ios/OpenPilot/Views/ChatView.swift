@@ -88,6 +88,9 @@ struct ChatView: View {
                 .padding(.horizontal, 16).padding(.vertical, 8)
                 .background(Color.orange.opacity(0.12))
             }
+            if let err = vm.errorText {
+                errorBanner(err)
+            }
             composer
         }
         .background(OP.canvas.ignoresSafeArea())
@@ -122,6 +125,7 @@ struct ChatView: View {
         if args.contains("-demoCitations") { demoCitations(); return }
         if args.contains("-demoReasoning") { demoReasoning(); return }
         if args.contains("-demoMarkdown") { demoMarkdown(); return }
+        if args.contains("-demoError") { demoError(); return }
         let prompt: String?
         if args.contains("-demoWeather") { prompt = "¿Cómo está el tiempo en Racine WI?" }
         else if args.contains("-demoCurrency") { prompt = "cuánto es 100 dólares en euros" }
@@ -237,12 +241,29 @@ struct ChatView: View {
         }
     }
 
+    /// Demo OFFLINE del banner de error + reintento (sin red).
+    private func demoError() {
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 400_000_000)
+            let conv: Conversation
+            if let c = current { conv = c }
+            else {
+                let c = Conversation(title: "Demo error", providerID: activeProvider?.id ?? "casa", model: activeModel)
+                context.insert(c); current = c; conv = c
+            }
+            let u = Message(role: "user", text: "¿Cuál es la capital de Francia?")
+            context.insert(u); conv.messages.append(u)
+            try? context.save()
+            vm.errorText = "The request timed out. (NSURLErrorDomain -1001)"
+        }
+    }
+
     private func attachmentPreview(_ ui: UIImage) -> some View {
         HStack(spacing: 10) {
             Image(uiImage: ui).resizable().scaledToFill()
                 .frame(width: 52, height: 52)
                 .clipShape(RoundedRectangle(cornerRadius: 10))
-            Text("Imagen adjunta").font(.caption).foregroundStyle(OP.textSecondary)
+            Text(T("Attached image", "Imagen adjunta")).font(.caption).foregroundStyle(OP.textSecondary)
             Spacer()
             Button { attachedImage = nil; Haptic.light() } label: {
                 Image(systemName: "xmark.circle.fill").font(.system(size: 20)).foregroundStyle(OP.textTertiary)
@@ -263,6 +284,30 @@ struct ChatView: View {
         .transition(.opacity)
     }
 
+    /// Banner de error de red/modelo con reintento (sustituye al viejo "⚠️" crudo).
+    private func errorBanner(_ detail: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.red)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(T("Something went wrong", "Algo salió mal"))
+                    .font(.caption.weight(.semibold)).foregroundStyle(OP.textPrimary)
+                Text(detail).font(.caption2).foregroundStyle(OP.textSecondary).lineLimit(2)
+            }
+            Spacer(minLength: 0)
+            Button { vm.errorText = nil; regenerate(); Haptic.light() } label: {
+                Text(T("Retry", "Reintentar")).font(.caption.weight(.semibold)).foregroundStyle(OP.accent)
+            }
+            .buttonStyle(ScaleButtonStyle())
+            Button { vm.errorText = nil } label: {
+                Image(systemName: "xmark.circle.fill").foregroundStyle(OP.textTertiary)
+            }
+            .accessibilityLabel(T("Dismiss", "Descartar"))
+        }
+        .padding(.horizontal, 16).padding(.vertical, 10)
+        .background(Color.red.opacity(0.10))
+        .transition(.opacity)
+    }
+
     // MARK: - Top bar
 
     private var topBar: some View {
@@ -271,11 +316,13 @@ struct ChatView: View {
             HStack {
                 Button(action: { onMenu(); Haptic.light() }) {
                     Image(systemName: "line.3.horizontal").font(.system(size: 18, weight: .medium))
+                        .accessibilityLabel(T("Menu", "Menú"))
                 }
                 .buttonStyle(ScaleButtonStyle())
                 Spacer()
                 Button(action: { onNewChat(); Haptic.light() }) {
                     Image(systemName: "square.and.pencil").font(.system(size: 18, weight: .medium))
+                        .accessibilityLabel(T("New chat", "Nueva conversación"))
                 }
                 .buttonStyle(ScaleButtonStyle())
             }
@@ -386,6 +433,7 @@ struct ChatView: View {
                 Image(systemName: "plus").font(.system(size: 18, weight: .medium))
                     .foregroundStyle(OP.textPrimary)
                     .frame(width: 34, height: 34)
+                    .accessibilityLabel(T("Attach", "Adjuntar"))
             }
             if !imageMode {
                 Button { browse.toggle(); Haptic.selection() } label: {
@@ -395,6 +443,7 @@ struct ChatView: View {
                         .background(browse ? OP.accent.opacity(0.15) : Color.clear)
                         .clipShape(Circle())
                         .animation(.easeInOut(duration: 0.2), value: browse)
+                        .accessibilityLabel(T("Search the web", "Buscar en la web"))
                 }
                 .buttonStyle(ScaleButtonStyle())
             }
@@ -405,6 +454,7 @@ struct ChatView: View {
                     .background(imageMode ? OP.accent.opacity(0.15) : Color.clear)
                     .clipShape(Circle())
                     .animation(.easeInOut(duration: 0.2), value: imageMode)
+                    .accessibilityLabel(T("Generate image", "Generar imagen"))
             }
             .buttonStyle(ScaleButtonStyle())
             if !imageMode {
@@ -425,10 +475,11 @@ struct ChatView: View {
                         .clipShape(Circle())
                         .symbolEffect(.pulse, options: .repeating, isActive: voice.isListening)
                         .animation(.easeInOut(duration: 0.2), value: voice.isListening)
+                        .accessibilityLabel(T("Dictate", "Dictar"))
                 }
                 .buttonStyle(ScaleButtonStyle())
             }
-            TextField(imageMode ? T("Describe the image you want…", "Describe la imagen que quieres…") : T("Ask anything", "Pregunta lo que quieras"),
+            TextField(imageMode ? T("Describe the image…", "Describe la imagen…") : T("Ask anything", "Pregunta algo"),
                       text: $input, axis: .vertical)
                 .lineLimit(1...6)
                 .focused($composerFocused)
@@ -438,6 +489,7 @@ struct ChatView: View {
             if vm.isStreaming {
                 Button { vm.stop(); Haptic.light() } label: {
                     Image(systemName: "stop.circle.fill").font(.system(size: 30)).foregroundStyle(OP.textPrimary)
+                        .accessibilityLabel(T("Stop", "Detener"))
                 }
                 .buttonStyle(ScaleButtonStyle())
             } else {
@@ -448,6 +500,7 @@ struct ChatView: View {
                         .background(canSend ? OP.sendBg : OP.textTertiary)
                         .clipShape(Circle())
                         .animation(.easeInOut(duration: 0.2), value: canSend)
+                        .accessibilityLabel(T("Send", "Enviar"))
                 }
                 .disabled(!canSend)
                 .buttonStyle(ScaleButtonStyle())
