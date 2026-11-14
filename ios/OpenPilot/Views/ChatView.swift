@@ -132,6 +132,7 @@ struct ChatView: View {
         if args.contains("-demoMarkdown") { demoMarkdown(); return }
         if args.contains("-demoStream") { demoStream(); return }
         if args.contains("-demoEdit") { demoEdit(); return }
+        if args.contains("-demoKeychain") { demoKeychain(); return }
         if args.contains("-demoError") { demoError(); return }
         let prompt: String?
         if args.contains("-demoWeather") { prompt = "¿Cómo está el tiempo en Racine WI?" }
@@ -214,6 +215,30 @@ struct ChatView: View {
             try? await Task.sleep(nanoseconds: 400_000_000)
             startEdit(u)
         }
+    }
+
+    /// Verificación offline del Keychain: round-trip de escritura/lectura y
+    /// migración del respaldo legacy. No toca providers reales; limpia al final.
+    private func demoKeychain() {
+        let c = Conversation(); context.insert(c); current = c
+        var results: [String] = []
+        let id = "kctest-" + UUID().uuidString.prefix(6).lowercased()
+        let p = ProviderConfig(id: id, name: "KeychainTest", baseURL: "https://example.com", apiKey: "sk-test-12345")
+        context.insert(p)
+        results.append(p.apiKey == "sk-test-12345" ? "✅ write → Keychain → read OK" : "❌ round-trip FAIL")
+        results.append(p.apiKeyLegacy.isEmpty ? "✅ sin texto plano (legacy vacío)" : "❌ legacy aún guarda la key")
+        let id2 = id + "-legacy"
+        let p2 = ProviderConfig(id: id2, name: "LegacyTest", baseURL: "https://example.com", apiKey: "")
+        context.insert(p2)
+        p2.apiKeyLegacy = "sk-legacy-999"
+        KeychainStore.delete(id2)
+        ProviderConfig.migrateKeysToKeychain(in: context)
+        results.append(p2.apiKey == "sk-legacy-999" && p2.apiKeyLegacy.isEmpty ? "✅ migración legacy → Keychain OK" : "❌ migración FAIL")
+        KeychainStore.delete(id); KeychainStore.delete(id2)
+        context.delete(p); context.delete(p2)
+        let u = Message(role: "user", text: "Test de Keychain"); u.conversation = c; context.insert(u)
+        let a = Message(role: "assistant", text: results.joined(separator: "\n")); a.conversation = c; context.insert(a)
+        c.title = "Keychain"; try? context.save()
     }
 
     /// Simula streaming offline para verificar el cursor ▍ y el ocultado de acciones.

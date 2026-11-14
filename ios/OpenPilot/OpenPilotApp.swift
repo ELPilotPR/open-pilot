@@ -3,10 +3,20 @@ import SwiftData
 
 @main
 struct OpenPilotApp: App {
-    var body: some Scene {
-        WindowGroup {
-            RootView()
+    let container: ModelContainer
+
+    init() {
+        do {
+            container = try ModelContainer(for: Conversation.self, Message.self, ProviderConfig.self)
+            // Migra las API keys legacy (texto plano) al Keychain una sola vez.
+            ProviderConfig.migrateKeysToKeychain(in: ModelContext(container))
+        } catch {
+            fatalError("Open Pilot: no se pudo abrir la base de datos local (\(error)).")
         }
-        .modelContainer(for: [Conversation.self, Message.self, ProviderConfig.self])
+    }
+
+    var body: some Scene {
+        WindowGroup { RootView() }
+            .modelContainer(container)
     }
 }

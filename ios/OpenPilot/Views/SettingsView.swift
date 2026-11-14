@@ -96,7 +96,11 @@ struct SettingsView: View {
     }
 
     private func delete(at offsets: IndexSet) {
-        for i in offsets { context.delete(providers[i]) }
+        for i in offsets {
+            let p = providers[i]
+            KeychainStore.delete(p.id)
+            context.delete(p)
+        }
         try? context.save()
     }
 }
