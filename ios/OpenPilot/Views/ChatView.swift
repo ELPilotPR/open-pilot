@@ -453,8 +453,6 @@ struct ChatView: View {
             Text(T("How can I help you?", "¿En qué puedo ayudarte?"))
                 .font(.title2.weight(.semibold)).foregroundStyle(OP.textPrimary)
             Spacer()
-            LanguageToggle()
-                .padding(.bottom, 28)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .contentShape(Rectangle())
