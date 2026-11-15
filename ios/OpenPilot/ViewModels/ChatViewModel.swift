@@ -75,7 +75,8 @@ final class ChatViewModel: ObservableObject {
             }
 
         let prov = ProviderFactory.make(kind: provider.kind)
-        let model = conversation.model
+        let model = VisionRouting.effectiveModel(current: conversation.model, hasImage: hasImage,
+                                                 kind: provider.kind, baseURL: provider.baseURL)
         let baseURL = provider.baseURL
         let apiKey = provider.apiKey
 
