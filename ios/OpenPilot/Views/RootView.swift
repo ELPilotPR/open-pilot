@@ -51,8 +51,11 @@ struct RootView: View {
         .sheet(isPresented: $demoUsage) {
             NavigationStack { UsageDashboardView() }
         }
-        .task { purgeTemporary(); seedIfNeeded(); demoSidebarIfNeeded(); demoModelsIfNeeded(); demoProjectsIfNeeded(); demoMemoryIfNeeded(); demoShareIfNeeded(); demoOnDeviceIfNeeded(); demoUsageIfNeeded(); consumePendingShare(); consumeIntentFlags() }
-        .onChange(of: scenePhase) { _, phase in if phase == .active { consumePendingShare(); consumeIntentFlags() } }
+        .task { purgeTemporary(); seedIfNeeded(); demoSidebarIfNeeded(); demoModelsIfNeeded(); demoProjectsIfNeeded(); demoMemoryIfNeeded(); demoShareIfNeeded(); demoOnDeviceIfNeeded(); demoUsageIfNeeded(); consumePendingShare(); consumeIntentFlags(); consumeSpotlight() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { consumePendingShare(); consumeIntentFlags(); consumeSpotlight() }
+            if phase == .background { indexSpotlightIfNeeded() }
+        }
         .onChange(of: current?.id) { oldID, newID in
             guard let oldID, oldID != newID else { return }
             let desc = FetchDescriptor<Conversation>(predicate: #Predicate { $0.id == oldID })
@@ -121,6 +124,21 @@ struct RootView: View {
             d.removeObject(forKey: IntentSupport.newChatFlag)
             current = nil
         }
+    }
+
+    /// Abre la conversación seleccionada desde un resultado de Spotlight.
+    private func consumeSpotlight() {
+        guard let id = SpotlightSupport.pendingID else { return }
+        SpotlightSupport.pendingID = nil
+        let desc = FetchDescriptor<Conversation>(predicate: #Predicate { $0.id == id })
+        if let c = (try? context.fetch(desc))?.first { current = c }
+    }
+
+    /// Reindexa en Spotlight al pasar a segundo plano (si está activado).
+    private func indexSpotlightIfNeeded() {
+        guard UserDefaults.standard.bool(forKey: "spotlightEnabled") else { return }
+        let all = (try? context.fetch(FetchDescriptor<Conversation>())) ?? []
+        SpotlightSupport.index(all.filter { !$0.isTemporary })
     }
 
     /// Demo offline: abre el editor del proveedor on-device con su estado real.

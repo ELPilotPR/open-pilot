@@ -145,6 +145,17 @@ struct SettingsView: View {
 
             Section {
                 NavigationLink {
+                    SpotlightSettingsView()
+                } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(T("Spotlight", "Spotlight")).foregroundStyle(OP.textPrimary)
+                        Text(T("Search your chats from the system", "Busca tus chats desde el sistema")).font(.caption).foregroundStyle(OP.textSecondary)
+                    }
+                }
+            }
+
+            Section {
+                NavigationLink {
                     MemoryView()
                 } label: {
                     VStack(alignment: .leading, spacing: 2) {

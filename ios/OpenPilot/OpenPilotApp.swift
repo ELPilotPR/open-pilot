@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import CoreSpotlight
 
 @main
 struct OpenPilotApp: App {
@@ -16,7 +17,7 @@ struct OpenPilotApp: App {
     }
 
     var body: some Scene {
-        WindowGroup { RootView().onOpenURL { url in DeepLinkSupport.route(url) } }
+        WindowGroup { RootView().onOpenURL { url in DeepLinkSupport.route(url) }.onContinueUserActivity(CSSearchableItemActionType) { SpotlightSupport.handle($0) } }
             .modelContainer(container)
     }
 }
