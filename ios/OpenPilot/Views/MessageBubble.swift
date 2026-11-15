@@ -95,6 +95,7 @@ struct MessageRow: View {
                         if let onRegenerate { regenerateButton(onRegenerate) }
                         if !message.text.isEmpty && !isActive { speakButton }
                         if !message.text.isEmpty && !isActive { copyButton }
+                        if !message.text.isEmpty && !isActive { feedbackButtons }
                     }
                 }
             }
@@ -223,6 +224,28 @@ struct MessageRow: View {
                 .font(.system(size: 13))
                 .foregroundStyle(speaking ? OP.accent : OP.textSecondary)
                 .accessibilityLabel(speaking ? T("Stop speaking", "Dejar de leer") : T("Read aloud", "Leer en voz alta"))
+        }
+        .buttonStyle(ScaleButtonStyle())
+    }
+
+    /// 👍/👎 sobre la respuesta. El voto se persiste en el mensaje.
+    @ViewBuilder private var feedbackButtons: some View {
+        Button {
+            message.toggleFeedback(1); Haptic.light()
+        } label: {
+            Image(systemName: message.feedback == 1 ? "hand.thumbsup.fill" : "hand.thumbsup")
+                .font(.system(size: 13))
+                .foregroundStyle(message.feedback == 1 ? OP.accent : OP.textSecondary)
+                .accessibilityLabel(T("Good response", "Buena respuesta"))
+        }
+        .buttonStyle(ScaleButtonStyle())
+        Button {
+            message.toggleFeedback(-1); Haptic.light()
+        } label: {
+            Image(systemName: message.feedback == -1 ? "hand.thumbsdown.fill" : "hand.thumbsdown")
+                .font(.system(size: 13))
+                .foregroundStyle(message.feedback == -1 ? OP.danger : OP.textSecondary)
+                .accessibilityLabel(T("Bad response", "Mala respuesta"))
         }
         .buttonStyle(ScaleButtonStyle())
     }

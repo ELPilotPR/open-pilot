@@ -28,6 +28,9 @@ final class Message {
     var version: Int = 1
     var preferredChildID: UUID?
 
+    /// Voto del usuario sobre la respuesta: 0 sin voto, 1 útil (👍), -1 no útil (👎).
+    var feedback: Int = 0
+
     init(role: String, text: String = "", reasoning: String = "") {
         self.id = UUID()
         self.role = role
@@ -54,5 +57,10 @@ final class Message {
     var citations: [CitationReference] {
         get { (try? JSONDecoder().decode([CitationReference].self, from: citationsData)) ?? [] }
         set { citationsData = (try? JSONEncoder().encode(newValue)) ?? Data() }
+    }
+
+    /// Alterna el voto 👍/👎. Tocar el mismo voto lo quita; el otro lo reemplaza.
+    func toggleFeedback(_ value: Int) {
+        feedback = (feedback == value) ? 0 : value
     }
 }
