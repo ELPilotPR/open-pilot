@@ -14,6 +14,7 @@
 - **Web search with inline citations** — grounded answers with tappable source pills.
 - **Generative UI cards** — native weather and currency-conversion cards rendered from public, key-free APIs (Open-Meteo, Frankfurter/BCE).
 - **Image generation, editing & variations** — generate an image, then create a variation or redraw it with a prompt (image-to-image), on providers that support it.
+- **Deep research** — the model plans sub-queries, the app searches and reads the web, then synthesizes a cited report (client-side, no backend).
 - **Voice** — dictate messages with on-device speech recognition, read replies aloud with a **pickable device voice**, and a **live voice mode** for continuous hands-free conversation (listen → reply → listen) with **barge-in** (interrupt the assistant by speaking).
 - **Attachments** — photos from library or camera, plus **files** (PDF, documents, code) extracted into the model's context.
 - **Canvas** — a side editor for code or text you can revise by hand or ask the model to change, with navigable versions. A **Code / Preview** toggle renders HTML & JavaScript in an on-device WebView and draws **Mermaid** diagrams fully offline (bundled mermaid.js).
@@ -74,6 +75,7 @@ ios/            Native iOS app (SwiftUI + SwiftData)
 - [x] Side-by-side multi-model comparison
 - [x] iPad/Mac split view + keyboard shortcuts
 - [x] Image editing & variations (image-to-image)
+- [x] Deep research (agentic multi-step web browse)
 - [x] Voice picker + barge-in (interrupt the assistant by speaking)
 - [x] Live voice mode (hands-free)
 - [x] Automated XCTest suite

@@ -36,6 +36,8 @@ struct ChatView: View {
     @State private var searchInChat = ""
     @State private var showCompare = false
     @StateObject private var compare = ModelCompare(columns: [])
+    @StateObject private var research = DeepResearch()
+    @State private var showResearch = false
     @State private var showVoicePicker = false
     @State private var editImageSource: Data? = nil
     @State private var editImagePrompt = ""
@@ -186,6 +188,9 @@ struct ChatView: View {
         .sheet(isPresented: $showCompare) {
             CompareView(compare: compare, providers: providers)
         }
+        .sheet(isPresented: $showResearch) {
+            DeepResearchView(research: research, provider: activeProvider, model: activeModel)
+        }
         .sheet(isPresented: $showVoicePicker) { VoicePickerView() }
         .alert(T("Edit image", "Editar imagen"), isPresented: $showEditImagePrompt) {
             TextField(T("Describe the change…", "Describe el cambio…"), text: $editImagePrompt)
@@ -250,6 +255,7 @@ struct ChatView: View {
         if args.contains("-demoCompare") { demoCompare(); return }
         if args.contains("-demoVoice") { demoVoice(); return }
         if args.contains("-demoImageEdit") { demoImageEdit(); return }
+        if args.contains("-demoResearch") { demoResearch(); return }
         if args.contains("-demoCI") {
             CustomInstructions.aboutYou = "Soy Javier, desarrollador en Wisconsin. Trabajo en iOS y crypto."
             CustomInstructions.responsePrefs = "Responde siempre en español, directo y con tablas cuando haya datos."
@@ -1008,6 +1014,11 @@ struct ChatView: View {
         showCompare = true
     }
 
+    private func openResearch() {
+        research.question = ""
+        showResearch = true
+    }
+
     /// DEMO offline: abre el comparador con dos respuestas de ejemplo (sin red).
     private func demoCompare() {
         Task { @MainActor in
@@ -1021,6 +1032,28 @@ struct ChatView: View {
             compare.columns = [a, b]
             compare.prompt = "¿Cuál es la capital de Francia?"
             showCompare = true
+        }
+    }
+
+    /// DEMO offline: abre deep research con plan, fuentes e informe de ejemplo (sin red).
+    private func demoResearch() {
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            research.question = "¿Qué impacto tiene la IA en el empleo?"
+            research.steps = [
+                DeepResearch.Step(query: "IA y empleo: estadísticas recientes", isDone: true, sourceCount: 3),
+                DeepResearch.Step(query: "sectores con mayor automatización", isDone: true, sourceCount: 2),
+                DeepResearch.Step(query: "nuevos roles creados por la IA", isDone: true, sourceCount: 2)
+            ]
+            research.sources = [
+                WebSource(title: "Informe OIT sobre IA y empleo", url: "https://example.org/oit-ia-empleo", snippet: "Estudio de la OIT."),
+                WebSource(title: "Automatización por sectores", url: "https://example.org/sectores", snippet: "Análisis sectorial."),
+                WebSource(title: "Nuevos roles en IA", url: "https://example.org/roles-ia", snippet: "Empleos emergentes.")
+            ]
+            research.report = "## Impacto de la IA en el empleo\n\nLa evidencia sugiere un efecto **neto mixto**: la IA automatiza tareas rutinarias pero también crea nuevos roles [1].\n\n- **Sectores más expuestos:** manufactura, atención al cliente y tareas administrativas [2].\n- **Roles emergentes:** ingeniería de datos, supervisión de modelos y ética de IA [3].\n\n> El saldo depende de la velocidad de adopción y de las políticas de recualificación [1].\n\n## Fuentes\n1. https://example.org/oit-ia-empleo\n2. https://example.org/sectores\n3. https://example.org/roles-ia"
+            research.phase = .done
+            research.isRunning = false
+            showResearch = true
         }
     }
 
@@ -1060,6 +1093,7 @@ struct ChatView: View {
                 Button { openCanvasFromChat() } label: { Label("Canvas", systemImage: "square.and.pencil") }
                 Button { showPromptLibrary = true } label: { Label(T("Prompt library", "Librería de prompts"), systemImage: "sparkles") }
                 Button { openCompare() } label: { Label(T("Compare models", "Comparar modelos"), systemImage: "rectangle.split.2x2") }
+                Button { openResearch() } label: { Label(T("Deep research", "Investigar a fondo"), systemImage: "magnifyingglass") }
             } label: {
                 Image(systemName: "plus").font(.system(size: 18, weight: .medium))
                     .foregroundStyle(OP.textPrimary)
