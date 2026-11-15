@@ -8,6 +8,7 @@ struct RootView: View {
     @State private var current: Conversation?
     @State private var sidebarOpen = false
     @State private var showSettings = false
+    @State private var demoProvider: ProviderConfig?
     @AppStorage("appearanceMode") private var appearanceMode = "auto"
 
     var body: some View {
@@ -36,7 +37,21 @@ struct RootView: View {
         .sheet(isPresented: $showSettings) {
             NavigationStack { SettingsView() }
         }
-        .task { seedIfNeeded(); demoSidebarIfNeeded() }
+        .sheet(item: $demoProvider) { p in
+            NavigationStack { ProviderEditorView(provider: p) }
+        }
+        .task { seedIfNeeded(); demoSidebarIfNeeded(); demoModelsIfNeeded() }
+    }
+
+    /// Demo offline del editor de modelos con presets y capacidades (Qwen).
+    private func demoModelsIfNeeded() {
+        guard CommandLine.arguments.contains("-demoModels") else { return }
+        let p = ProviderConfig(id: "demo-qwen", name: "Qwen Cloud", kind: "openai",
+                               baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1", apiKey: "")
+        p.models = ["qwen-max", "qwen-vl-max", "qwq-plus"]
+        context.insert(p)
+        try? context.save()
+        demoProvider = p
     }
 
     /// Demo offline del sidebar con conversaciones fijadas y archivadas.

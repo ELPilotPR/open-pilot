@@ -25,9 +25,36 @@ struct ProviderEditorView: View {
 
             Section {
                 ForEach(provider.models, id: \.self) { m in
-                    Text(m).font(.callout)
+                    HStack(spacing: 6) {
+                        Text(m).font(.callout)
+                        Spacer(minLength: 0)
+                        ForEach(ModelCatalog.preset(for: m)?.badges ?? [], id: \.self) { badge in
+                            Text(badgeLabel(badge))
+                                .font(.caption2.weight(.medium))
+                                .padding(.horizontal, 6).padding(.vertical, 2)
+                                .background(OP.elevated).clipShape(Capsule())
+                                .foregroundStyle(OP.textSecondary)
+                        }
+                    }
                 }
                 .onDelete { provider.models.remove(atOffsets: $0) }
+
+                if !presets.isEmpty {
+                    Menu {
+                        ForEach(presets) { p in
+                            Button {
+                                if !provider.models.contains(p.id) {
+                                    provider.models.append(p.id); try? context.save()
+                                }
+                            } label: {
+                                Label(p.name + (p.badges.isEmpty ? "" : " · " + p.badges.joined(separator: ", ")),
+                                      systemImage: provider.models.contains(p.id) ? "checkmark" : "plus")
+                            }
+                        }
+                    } label: {
+                        Label(T("Add from presets", "Añadir de presets"), systemImage: "sparkles")
+                    }
+                }
 
                 HStack {
                     TextField(T("Add model (e.g. qwen-plus)", "Añadir modelo (ej. qwen-plus)"), text: $newModel)
@@ -69,6 +96,17 @@ struct ProviderEditorView: View {
         .navigationTitle(provider.name)
         .navigationBarTitleDisplayMode(.inline)
         .onDisappear { try? context.save() }
+    }
+
+    private var presets: [ModelPreset] { ModelCatalog.presets(for: provider.baseURL, kind: provider.kind) }
+
+    private func badgeLabel(_ b: String) -> String {
+        switch b {
+        case "vision": return T("vision", "visión")
+        case "reasoning": return T("reasoning", "razonamiento")
+        case "image": return T("image", "imagen")
+        default: return b
+        }
     }
 
     private func addModel() {
