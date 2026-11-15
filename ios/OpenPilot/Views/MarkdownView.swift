@@ -314,6 +314,11 @@ struct CodeBlockView: View {
     let lang: String
     let code: String
     @State private var copied = false
+    @State private var runResult: CodeInterpreter.RunResult?
+    @State private var running = false
+
+    private var isJS: Bool { ["js", "javascript", "jsx", "node"].contains(lang.lowercased()) }
+    private var isCSV: Bool { lang.lowercased() == "csv" }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -322,6 +327,24 @@ struct CodeBlockView: View {
                     .font(.caption2.weight(.medium))
                     .foregroundStyle(OP.textTertiary)
                 Spacer()
+                if isJS {
+                    Button {
+                        running = true
+                        let src = code
+                        DispatchQueue.global(qos: .userInitiated).async {
+                            let r = CodeInterpreter.run(src)
+                            DispatchQueue.main.async { runResult = r; running = false; Haptic.selection() }
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: running ? "hourglass" : "play.fill")
+                            Text(running ? T("Running…", "Ejecutando…") : T("Run", "Ejecutar"))
+                        }
+                        .font(.caption2)
+                        .foregroundStyle(OP.accent)
+                    }
+                    .disabled(running)
+                }
                 Button {
                     NotificationCenter.default.post(name: .openCanvas, object: nil, userInfo: ["lang": lang, "code": code])
                 } label: {
@@ -349,13 +372,40 @@ struct CodeBlockView: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .background(OP.elevated)
-            ScrollView(.horizontal, showsIndicators: false) {
-                Text(SyntaxHighlighter.highlight(code.trimmingCharacters(in: .newlines), lang: lang))
-                    .font(.system(.footnote, design: .monospaced))
-                    .textSelection(.enabled)
+            if isCSV {
+                CSVChartView(table: CodeInterpreter.parseCSV(code))
+                    .background(OP.codeBlock)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    Text(SyntaxHighlighter.highlight(code.trimmingCharacters(in: .newlines), lang: lang))
+                        .font(.system(.footnote, design: .monospaced))
+                        .textSelection(.enabled)
+                        .padding(12)
+                }
+                .background(OP.codeBlock)
+                if let r = runResult {
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 6) {
+                            Image(systemName: r.ok ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                                .foregroundStyle(r.ok ? Color.green : Color.orange)
+                            Text(r.ok ? T("Output", "Salida") : T("Error", "Error"))
+                                .font(.caption2.weight(.medium))
+                                .foregroundStyle(OP.textTertiary)
+                            Spacer()
+                            Text(String(format: "%.0f ms", r.durationMs))
+                                .font(.caption2.monospacedDigit())
+                                .foregroundStyle(OP.textTertiary)
+                        }
+                        Text(r.output.isEmpty ? T("(no output)", "(sin salida)") : r.output)
+                            .font(.system(.footnote, design: .monospaced))
+                            .foregroundStyle(OP.textPrimary)
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
                     .padding(12)
+                    .background(OP.elevated)
+                }
             }
-            .background(OP.codeBlock)
         }
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(OP.border, lineWidth: 1))

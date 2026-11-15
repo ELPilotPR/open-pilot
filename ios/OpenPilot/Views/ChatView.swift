@@ -221,6 +221,7 @@ struct ChatView: View {
         if args.contains("-demoMath") { demoMath(); return }
         if args.contains("-demoExport") { demoExport(); return }
         if args.contains("-demoPrompts") { demoPrompts(); return }
+        if args.contains("-demoCode") { demoCode(); return }
         if args.contains("-demoCI") {
             CustomInstructions.aboutYou = "Soy Javier, desarrollador en Wisconsin. Trabajo en iOS y crypto."
             CustomInstructions.responsePrefs = "Responde siempre en español, directo y con tablas cuando haya datos."
@@ -846,6 +847,45 @@ struct ChatView: View {
             }
             input = "/tr"
             composerFocused = true
+        }
+    }
+
+    /// Demo OFFLINE de code interpreter: chart CSV (auto) + bloque JS con botón Ejecutar.
+    private func demoCode() {
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            let conv = Conversation(title: "Demo código", providerID: activeProvider?.id ?? "casa", model: activeModel)
+            context.insert(conv); current = conv
+            let now = Date()
+            let u = Message(role: "user", text: "Grafica estas ventas y dime el total")
+            u.createdAt = now
+            let text = """
+            Ventas del trimestre:
+
+            ```csv
+            mes,ventas
+            Ene,120
+            Feb,180
+            Mar,150
+            Abr,240
+            ```
+
+            Y el total con JavaScript (pulsa **Ejecutar**):
+
+            ```js
+            const ventas = [120, 180, 150, 240];
+            const total = ventas.reduce((a, b) => a + b, 0);
+            console.log("Total:", total);
+            console.log("Promedio:", total / ventas.length);
+            total;
+            ```
+            """
+            let a = Message(role: "assistant", text: text)
+            a.createdAt = now.addingTimeInterval(1); a.parentID = u.id
+            u.preferredChildID = a.id
+            for m in [u, a] { m.conversation = conv; conv.messages.append(m); context.insert(m) }
+            conv.activeLeafID = a.id
+            try? context.save()
         }
     }
 
