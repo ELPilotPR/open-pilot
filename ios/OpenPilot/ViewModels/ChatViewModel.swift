@@ -17,17 +17,20 @@ final class ChatViewModel: ObservableObject {
     private var task: Task<Void, Never>?
 
     func send(_ text: String, conversation: Conversation, provider: ProviderConfig,
-              context: ModelContext, browse: Bool = false, image: Data? = nil) {
+              context: ModelContext, browse: Bool = false, image: Data? = nil,
+              file: FileAttachment.Parsed? = nil) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         let hasImage = !(image?.isEmpty ?? true)
-        guard (!trimmed.isEmpty || hasImage), !isStreaming else { return }
+        let hasFile = !(file?.text.isEmpty ?? true)
+        guard (!trimmed.isEmpty || hasImage || hasFile), !isStreaming else { return }
         let isFirstTurn = conversation.messages.isEmpty
         errorText = nil
         conversation.ensureTree()
 
-        let userText = trimmed.isEmpty && hasImage ? "Describe esta imagen." : trimmed
+        let userText = trimmed.isEmpty ? (hasImage ? "Describe esta imagen." : "Analiza este archivo.") : trimmed
         let userMsg = Message(role: "user", text: userText)
         if hasImage { userMsg.imageData = image! }
+        if let f = file { userMsg.attachmentName = f.name; userMsg.attachmentText = f.text }
         userMsg.parentID = conversation.activeLeafID ?? conversation.sortedMessages.last?.id
         if let pid = userMsg.parentID, let parent = conversation.message(pid) {
             userMsg.version = conversation.siblings(of: userMsg).count + 1
@@ -62,8 +65,14 @@ final class ChatViewModel: ObservableObject {
                               context: ModelContext, browse: Bool, isFirstTurn: Bool) {
         let history = conversation.activeMessages
             .filter { $0.role != "assistant" || !$0.text.isEmpty }
-            .map { ChatTurn(role: $0.role, content: $0.text,
-                            images: ($0.role == "user" && !$0.imageData.isEmpty) ? [$0.imageData] : []) }
+            .map { m -> ChatTurn in
+                var content = m.text
+                if m.role == "user", let ft = m.attachmentText, !ft.isEmpty {
+                    content += "\n\n[Archivo adjunto: \(m.attachmentName ?? "archivo")]\n\(ft)"
+                }
+                return ChatTurn(role: m.role, content: content,
+                                images: (m.role == "user" && !m.imageData.isEmpty) ? [m.imageData] : [])
+            }
 
         let prov = ProviderFactory.make(kind: provider.kind)
         let model = conversation.model
@@ -268,6 +277,8 @@ final class ChatViewModel: ObservableObject {
         let newUser = Message(role: "user", text: trimmed)
         newUser.parentID = message.parentID
         newUser.imageData = message.imageData
+        newUser.attachmentName = message.attachmentName
+        newUser.attachmentText = message.attachmentText
         newUser.version = conversation.siblings(of: newUser).count + 1
         newUser.conversation = conversation
         conversation.messages.append(newUser)

@@ -17,6 +17,8 @@ struct ChatView: View {
     @State private var imageMode = false
     @State private var atBottom = true
     @State private var attachedImage: Data?
+    @State private var attachedFile: FileAttachment.Parsed?
+    @State private var showFilePicker = false
     @State private var photoItem: PhotosPickerItem?
     @State private var showCamera = false
     @State private var imageSupport: [String: Bool] = [:]
@@ -66,6 +68,23 @@ struct ChatView: View {
             }
             if let img = attachedImage, let ui = UIImage(data: img) {
                 attachmentPreview(ui)
+            }
+            if let f = attachedFile {
+                HStack(spacing: 8) {
+                    Image(systemName: "doc.fill").font(.system(size: 16)).foregroundStyle(OP.accent)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(f.name).font(.caption.weight(.medium)).foregroundStyle(OP.textPrimary).lineLimit(1)
+                        Text(T("Attached file", "Archivo adjunto")).font(.caption2).foregroundStyle(OP.textSecondary)
+                    }
+                    Spacer()
+                    Button { attachedFile = nil; Haptic.light() } label: {
+                        Image(systemName: "xmark.circle.fill").font(.system(size: 20)).foregroundStyle(OP.textTertiary)
+                    }
+                }
+                .padding(.horizontal, 12).padding(.vertical, 8)
+                .background(OP.elevated).clipShape(RoundedRectangle(cornerRadius: 12))
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(OP.border, lineWidth: 1))
+                .padding(.horizontal, 16).padding(.vertical, 4)
             }
             if imageMode && probingImage {
                 HStack(spacing: 8) {
@@ -119,6 +138,15 @@ struct ChatView: View {
             }
             .ignoresSafeArea()
         }
+        .fileImporter(isPresented: $showFilePicker,
+                      allowedContentTypes: FileAttachment.allowedTypes,
+                      allowsMultipleSelection: false) { result in
+            if case .success(let urls) = result, let url = urls.first,
+               let parsed = FileAttachment.parse(url: url) {
+                attachedFile = parsed
+                Haptic.light()
+            }
+        }
         .sheet(item: $editingMessage) { m in
             editSheet(m)
         }
@@ -139,6 +167,7 @@ struct ChatView: View {
         if args.contains("-demoKeychain") { demoKeychain(); return }
         if args.contains("-demoError") { demoError(); return }
         if args.contains("-demoVersions") { demoVersions(startVersion: args.contains("-v1") ? 1 : 2); return }
+        if args.contains("-demoFile") { demoFile(); return }
         if args.contains("-demoCI") {
             CustomInstructions.aboutYou = "Soy Javier, desarrollador en Wisconsin. Trabajo en iOS y crypto."
             CustomInstructions.responsePrefs = "Responde siempre en español, directo y con tablas cuando haya datos."
@@ -181,6 +210,26 @@ struct ChatView: View {
             for m in [u1, a1, u2, a2] { m.conversation = conv; conv.messages.append(m); context.insert(m) }
             conv.activeLeafID = a2.id
             if startVersion == 1 { conv.switchToVersion(u1) }   // ejercita el cambio de rama
+            try? context.save()
+        }
+    }
+
+    /// Demo OFFLINE de adjunto: un mensaje de usuario con un archivo (chip) y
+    /// su respuesta; verifica el chip de archivo en la burbuja sin red.
+    private func demoFile() {
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            let conv = Conversation(title: "Demo archivo", providerID: activeProvider?.id ?? "casa", model: activeModel)
+            context.insert(conv); current = conv
+            let u = Message(role: "user", text: "Resume este documento en 3 puntos.")
+            u.attachmentName = "informe-ventas.pdf"
+            u.attachmentText = "Informe de ventas Q3. Ingresos: 1.2M. Crecimiento: 18%. Región norte lidera."
+            u.parentID = nil
+            let a = Message(role: "assistant", text: "Resumen del informe:\n\n1. **Ingresos** de 1.2M en el Q3.\n2. **Crecimiento** del 18% interanual.\n3. La **región norte** lidera las ventas.")
+            a.parentID = u.id; u.preferredChildID = a.id
+            a.completionTokens = 40; a.tokensPerSecond = 33
+            for m in [u, a] { m.conversation = conv; conv.messages.append(m); context.insert(m) }
+            conv.activeLeafID = a.id
             try? context.save()
         }
     }
@@ -554,6 +603,7 @@ struct ChatView: View {
                     Label(T("Choose photo", "Elegir foto"), systemImage: "photo.on.rectangle")
                 }
                 Button { showCamera = true } label: { Label(T("Camera", "Cámara"), systemImage: "camera") }
+                Button { showFilePicker = true } label: { Label(T("Attach file", "Adjuntar archivo"), systemImage: "doc") }
             } label: {
                 Image(systemName: "plus").font(.system(size: 18, weight: .medium))
                     .foregroundStyle(OP.textPrimary)
@@ -639,7 +689,7 @@ struct ChatView: View {
     }
 
     private var canSend: Bool {
-        let hasContent = !input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || attachedImage != nil
+        let hasContent = !input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || attachedImage != nil || attachedFile != nil
         return hasContent && activeProvider != nil
     }
 
@@ -722,8 +772,10 @@ struct ChatView: View {
         Haptic.medium()
         let text = input
         let img = attachedImage
+        let file = attachedFile
         input = ""
         attachedImage = nil
+        attachedFile = nil
         composerFocused = false
         let c: Conversation
         if let cur = current { c = cur } else {
@@ -734,7 +786,7 @@ struct ChatView: View {
         if imageMode {
             vm.generateImage(prompt: text, conversation: c, provider: p, context: context, imageModel: imageModel)
         } else {
-            vm.send(text, conversation: c, provider: p, context: context, browse: browse, image: img)
+            vm.send(text, conversation: c, provider: p, context: context, browse: browse, image: img, file: file)
         }
     }
 }

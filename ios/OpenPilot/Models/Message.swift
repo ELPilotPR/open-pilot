@@ -9,6 +9,8 @@ final class Message {
     var reasoning: String
     var sourcesData: Data = Data()   // [WebSource] codificado (fuentes del browse)
     var imageData: Data = Data()     // foto adjunta (user) o imagen generada (assistant)
+    var attachmentName: String?      // nombre del archivo adjunto (PDF/doc/código)
+    var attachmentText: String?      // texto extraído del archivo (se envía al modelo)
     var weatherData: Data = Data()   // WeatherSnapshot codificado (tarjeta de clima)
     var currencyData: Data = Data()  // CurrencySnapshot codificado (tarjeta de divisas)
     var citationsData: Data = Data() // [CitationReference] (contrato content_references)

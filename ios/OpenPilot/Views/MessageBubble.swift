@@ -38,6 +38,15 @@ struct MessageRow: View {
                                 .frame(maxWidth: 240, maxHeight: 240)
                                 .clipShape(RoundedRectangle(cornerRadius: 16))
                         }
+                        if let name = message.attachmentName {
+                            HStack(spacing: 6) {
+                                Image(systemName: "doc.fill").font(.system(size: 14)).foregroundStyle(OP.accent)
+                                Text(name).font(.caption.weight(.medium)).foregroundStyle(OP.textPrimary).lineLimit(1)
+                            }
+                            .padding(.horizontal, 12).padding(.vertical, 8)
+                            .background(OP.userBubble)
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                        }
                         if !message.text.isEmpty {
                             Text(message.text)
                                 .font(.body).foregroundStyle(OP.textPrimary)
