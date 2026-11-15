@@ -9,6 +9,7 @@ struct RootView: View {
     @State private var sidebarOpen = false
     @State private var showSettings = false
     @State private var demoProvider: ProviderConfig?
+    @State private var demoMemory = false
     @AppStorage("appearanceMode") private var appearanceMode = "auto"
 
     var body: some View {
@@ -40,7 +41,10 @@ struct RootView: View {
         .sheet(item: $demoProvider) { p in
             NavigationStack { ProviderEditorView(provider: p) }
         }
-        .task { seedIfNeeded(); demoSidebarIfNeeded(); demoModelsIfNeeded() }
+        .sheet(isPresented: $demoMemory) {
+            NavigationStack { MemoryView() }
+        }
+        .task { seedIfNeeded(); demoSidebarIfNeeded(); demoModelsIfNeeded(); demoProjectsIfNeeded(); demoMemoryIfNeeded() }
     }
 
     /// Demo offline del editor de modelos con presets y capacidades (Qwen).
@@ -71,6 +75,31 @@ struct RootView: View {
         }
         try? context.save()
         withAnimation(.easeInOut(duration: 0.25)) { sidebarOpen = true }
+    }
+
+    /// Demo offline de proyectos: siembra dos proyectos con chats y abre el sidebar.
+    private func demoProjectsIfNeeded() {
+        guard CommandLine.arguments.contains("-demoProjects") else { return }
+        let p1 = Project(name: "Trabajo", instructions: "Responde en tono profesional y conciso.", symbol: "briefcase")
+        let p2 = Project(name: "Personal", instructions: "Tono cercano y casual.", symbol: "heart")
+        context.insert(p1); context.insert(p2)
+        let c1 = Conversation(title: "Informe trimestral", providerID: "casa", model: "swift-iq3_s")
+        c1.projectID = p1.id; c1.isPinned = true
+        let c2 = Conversation(title: "Ideas de viaje", providerID: "casa", model: "swift-iq3_s")
+        c2.projectID = p2.id
+        let c3 = Conversation(title: "Chat sin proyecto", providerID: "casa", model: "swift-iq3_s")
+        context.insert(c1); context.insert(c2); context.insert(c3)
+        try? context.save()
+        withAnimation(.easeInOut(duration: 0.25)) { sidebarOpen = true }
+    }
+
+    /// Demo offline de la memoria: siembra hechos y abre la vista de Memoria.
+    private func demoMemoryIfNeeded() {
+        guard CommandLine.arguments.contains("-demoMemory") else { return }
+        MemoryStore.enabled = true
+        MemoryStore.clear()
+        MemoryStore.add(["Vive en Wisconsin", "Prefiere respuestas en español", "Trabaja en una app iOS llamada Open Pilot"])
+        demoMemory = true
     }
 
     /// Auto = sigue al sistema; claro/oscuro = override explícito del usuario.

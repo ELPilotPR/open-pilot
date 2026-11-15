@@ -9,6 +9,7 @@ struct SidebarView: View {
     @Binding var isOpen: Bool
     var onSettings: () -> Void
     @Query(sort: \Conversation.createdAt, order: .reverse) private var conversations: [Conversation]
+    @Query(sort: \Project.createdAt) private var projects: [Project]
     @State private var search = ""
     @State private var sharePayload: SharePayload?
     @State private var renamingConv: Conversation?
@@ -17,6 +18,7 @@ struct SidebarView: View {
     @State private var deletingConv: Conversation?
     @State private var showDeleteConfirm = false
     @State private var showArchived = false
+    @State private var selectedProject: Project?
 
     private var filtered: [Conversation] {
         guard !search.isEmpty else { return conversations }
@@ -80,6 +82,17 @@ struct SidebarView: View {
                         }
                         ForEach(archivedList) { conv in convRow(conv) }
                     } else {
+                        sectionHeader(T("Projects", "Proyectos"))
+                        ForEach(projects) { p in projectRow(p) }
+                        Button { newProject() } label: {
+                            Label(T("New project", "Nuevo proyecto"), systemImage: "plus")
+                                .font(.footnote.weight(.medium))
+                                .foregroundStyle(OP.accent)
+                                .padding(.horizontal, 12).padding(.vertical, 6)
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.bottom, 6)
+
                         if active.isEmpty {
                             emptyNote(search.isEmpty ? T("No conversations yet", "Aún no hay conversaciones") : T("No results", "Sin resultados"))
                         }
@@ -128,6 +141,9 @@ struct SidebarView: View {
             Button(T("Cancel", "Cancelar"), role: .cancel) { renamingConv = nil }
             Button(T("Save", "Guardar")) { confirmRename() }
         }
+        .sheet(item: $selectedProject) { p in
+            NavigationStack { ProjectDetailView(project: p, current: $current, sidebarOpen: $isOpen) }
+        }
     }
 
     private func convRow(_ conv: Conversation) -> some View {
@@ -150,6 +166,16 @@ struct SidebarView: View {
             Button { togglePin(conv) } label: {
                 Label(conv.isPinned ? T("Unpin", "Desfijar") : T("Pin", "Fijar"),
                       systemImage: conv.isPinned ? "pin.slash" : "pin")
+            }
+            Menu {
+                Button { moveTo(conv, nil) } label: { Label(T("No project", "Sin proyecto"), systemImage: "folder") }
+                ForEach(projects) { p in
+                    Button { moveTo(conv, p.id) } label: {
+                        Label(p.name.isEmpty ? T("Project", "Proyecto") : p.name, systemImage: p.symbol)
+                    }
+                }
+            } label: {
+                Label(T("Move to project", "Mover a proyecto"), systemImage: "folder")
             }
             Button { toggleArchive(conv) } label: {
                 Label(conv.isArchived ? T("Unarchive", "Desarchivar") : T("Archive", "Archivar"),
@@ -189,6 +215,39 @@ struct SidebarView: View {
         if c.isArchived { c.isPinned = false }
         try? context.save(); Haptic.light()
         if c.isArchived && current?.id == c.id { current = nil }
+    }
+
+    private func projectRow(_ p: Project) -> some View {
+        let count = conversations.filter { $0.projectID == p.id && !$0.isArchived }.count
+        return Button {
+            selectedProject = p
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: p.symbol).font(.footnote).foregroundStyle(OP.accent).frame(width: 18)
+                Text(p.name.isEmpty ? T("Project", "Proyecto") : p.name)
+                    .font(.callout).foregroundStyle(OP.textPrimary).lineLimit(1)
+                Spacer()
+                if count > 0 {
+                    Text("\(count)").font(.caption2).foregroundStyle(OP.textTertiary)
+                }
+            }
+            .padding(.horizontal, 16).padding(.vertical, 8)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func newProject() {
+        let p = Project(name: T("New project", "Nuevo proyecto"))
+        context.insert(p); try? context.save()
+        selectedProject = p
+        Haptic.selection()
+    }
+
+    private func moveTo(_ c: Conversation, _ pid: UUID?) {
+        c.projectID = pid
+        try? context.save()
+        Haptic.selection()
     }
 
     private func close() { withAnimation(.easeInOut(duration: 0.25)) { isOpen = false } }

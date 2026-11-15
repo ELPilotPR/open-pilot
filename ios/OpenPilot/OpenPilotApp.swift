@@ -7,7 +7,7 @@ struct OpenPilotApp: App {
 
     init() {
         do {
-            container = try ModelContainer(for: Conversation.self, Message.self, ProviderConfig.self)
+            container = try ModelContainer(for: Conversation.self, Message.self, ProviderConfig.self, Project.self)
             // Migra las API keys legacy (texto plano) al Keychain una sola vez.
             ProviderConfig.migrateKeysToKeychain(in: ModelContext(container))
         } catch {

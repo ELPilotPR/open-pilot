@@ -97,6 +97,22 @@ struct SettingsView: View {
             }
 
             Section {
+                NavigationLink {
+                    MemoryView()
+                } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(T("Memory", "Memoria")).foregroundStyle(OP.textPrimary)
+                        Text(memoryStatus).font(.caption).foregroundStyle(OP.textSecondary)
+                    }
+                }
+            } header: {
+                Text(T("Memory", "Memoria"))
+            } footer: {
+                Text(T("Durable facts remembered across chats, stored only on this iPhone.",
+                       "Hechos duraderos recordados entre chats, guardados solo en este iPhone."))
+            }
+
+            Section {
                 Button { addProvider() } label: {
                     Label(T("Add OpenAI-compatible API", "Agregar API OpenAI-compatible"), systemImage: "plus")
                 }
@@ -119,6 +135,12 @@ struct SettingsView: View {
         let has = !ciAbout.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             || !ciPrefs.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         return has ? T("On", "Activadas") : T("Not set", "Sin configurar")
+    }
+
+    private var memoryStatus: String {
+        if !MemoryStore.enabled { return T("Off", "Desactivada") }
+        let n = MemoryStore.entries.count
+        return n == 0 ? T("No memories yet", "Sin recuerdos") : T("\(n) memories", "\(n) recuerdos")
     }
 
     private var langBinding: Binding<AppLang?> {

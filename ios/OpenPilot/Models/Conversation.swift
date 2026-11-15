@@ -15,6 +15,8 @@ final class Conversation {
     /// Fijada arriba del sidebar (pin) y/o archivada (oculta de la lista principal).
     var isPinned: Bool = false
     var isArchived: Bool = false
+    /// Proyecto al que pertenece (nil = sin proyecto). Migración ligera.
+    var projectID: UUID?
     @Relationship(deleteRule: .cascade, inverse: \Message.conversation)
     var messages: [Message]
 

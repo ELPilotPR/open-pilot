@@ -86,6 +86,14 @@ final class ChatViewModel: ObservableObject {
             var systemPrompt = ResponseStyle.current.systemPrompt
             let custom = CustomInstructions.systemPrompt
             if !custom.isEmpty { systemPrompt = custom + "\n\n" + systemPrompt }
+            let mem = MemoryStore.systemPrompt
+            if !mem.isEmpty { systemPrompt = mem + "\n\n" + systemPrompt }
+            if let pid = conversation.projectID {
+                let desc = FetchDescriptor<Project>(predicate: #Predicate { $0.id == pid })
+                if let proj = (try? context.fetch(desc))?.first, !proj.systemPrompt.isEmpty {
+                    systemPrompt = proj.systemPrompt + "\n\n" + systemPrompt
+                }
+            }
             turns.insert(ChatTurn(role: "system", content: systemPrompt), at: 0)
             do {
                 if WeatherService.isWeatherQuery(userText) && !hasImage {
@@ -145,6 +153,9 @@ final class ChatViewModel: ObservableObject {
                 }
                 if isFirstTurn {
                     self.generateTitle(conversation: conversation, provider: provider, context: context, firstUser: userText)
+                }
+                if MemoryStore.enabled && !assistant.text.isEmpty {
+                    self.extractMemories(userText: userText, assistantText: assistant.text, provider: provider, conversation: conversation)
                 }
             } catch {
                 if !Task.isCancelled {
@@ -231,6 +242,35 @@ final class ChatViewModel: ObservableObject {
                 conversation.title = title
                 try? context.save()
             }
+        }
+    }
+
+    /// Memoria automática: tras cada respuesta, pide al modelo hechos duraderos
+    /// del usuario y los guarda (dedup + tope). Fire-and-forget, como generateTitle.
+    private func extractMemories(userText: String, assistantText: String, provider: ProviderConfig, conversation: Conversation) {
+        let model = conversation.model
+        let base = provider.baseURL
+        let kind = provider.kind
+        let api = provider.apiKey
+        let existing = MemoryStore.entries.joined(separator: "\n")
+        Task { @MainActor in
+            let prompt = """
+            Extrae hechos duraderos y específicos sobre el usuario (preferencias, datos personales estables, proyectos) que sirvan para personalizar futuras respuestas. Ignora datos pasajeros o triviales. No repitas hechos ya conocidos. Devuelve UN hecho por línea, sin viñetas ni numeración, en el idioma del usuario. Si no hay nada nuevo que recordar, responde exactamente NINGUNO.
+
+            Hechos ya conocidos:
+            \(existing.isEmpty ? "(ninguno)" : existing)
+
+            Usuario: \(userText.prefix(600))
+            Asistente: \(assistantText.prefix(600))
+            """
+            var out = ""
+            do {
+                for try await ev in ProviderFactory.make(kind: kind).stream(turns: [ChatTurn(role: "user", content: prompt)], model: model, baseURL: base, apiKey: api) {
+                    if case .delta(let t) = ev { out += t }
+                }
+            } catch { return }
+            let facts = MemoryStore.parseExtraction(out)
+            if !facts.isEmpty { MemoryStore.add(facts) }
         }
     }
 
