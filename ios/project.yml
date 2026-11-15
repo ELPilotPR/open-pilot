@@ -40,6 +40,8 @@ targets:
           - CFBundleURLName: com.openpilot.app
             CFBundleURLSchemes:
               - openpilot
+        NSUserActivityTypes:
+          - com.openpilot.app.chat
         UILaunchScreen: {}
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false

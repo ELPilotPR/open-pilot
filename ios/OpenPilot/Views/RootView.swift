@@ -38,6 +38,7 @@ struct RootView: View {
             }
         }
         .id(accentColor)
+        .userActivity(HandoffSupport.activityType, isActive: current != nil) { activity in HandoffSupport.configure(activity, for: current) }
         .preferredColorScheme(resolvedColorScheme)
         .sheet(isPresented: $showSettings) {
             NavigationStack { SettingsView() }
@@ -51,9 +52,9 @@ struct RootView: View {
         .sheet(isPresented: $demoUsage) {
             NavigationStack { UsageDashboardView() }
         }
-        .task { purgeTemporary(); seedIfNeeded(); demoSidebarIfNeeded(); demoModelsIfNeeded(); demoProjectsIfNeeded(); demoMemoryIfNeeded(); demoShareIfNeeded(); demoOnDeviceIfNeeded(); demoUsageIfNeeded(); consumePendingShare(); consumeIntentFlags(); consumeSpotlight() }
+        .task { purgeTemporary(); seedIfNeeded(); demoSidebarIfNeeded(); demoModelsIfNeeded(); demoProjectsIfNeeded(); demoMemoryIfNeeded(); demoShareIfNeeded(); demoOnDeviceIfNeeded(); demoUsageIfNeeded(); consumePendingShare(); consumeIntentFlags(); consumeSpotlight(); consumeHandoff() }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { consumePendingShare(); consumeIntentFlags(); consumeSpotlight() }
+            if phase == .active { consumePendingShare(); consumeIntentFlags(); consumeSpotlight(); consumeHandoff() }
             if phase == .background { indexSpotlightIfNeeded() }
         }
         .onChange(of: current?.id) { oldID, newID in
@@ -139,6 +140,19 @@ struct RootView: View {
         guard UserDefaults.standard.bool(forKey: "spotlightEnabled") else { return }
         let all = (try? context.fetch(FetchDescriptor<Conversation>())) ?? []
         SpotlightSupport.index(all.filter { !$0.isTemporary })
+    }
+
+    /// Recibe un chat por Handoff desde otro dispositivo y lo crea localmente.
+    private func consumeHandoff() {
+        guard let p = HandoffSupport.pending else { return }
+        HandoffSupport.pending = nil
+        let prov = providers.first
+        let c = Conversation(title: p.title.isEmpty ? T("Handoff chat", "Chat recibido") : p.title,
+                             providerID: prov?.id ?? "casa", model: prov?.models.first ?? "swift-iq3_s")
+        for hm in p.messages {
+            let m = Message(role: hm.role, text: hm.text); m.conversation = c; c.messages.append(m)
+        }
+        c.ensureTree(); context.insert(c); try? context.save(); current = c
     }
 
     /// Demo offline: abre el editor del proveedor on-device con su estado real.

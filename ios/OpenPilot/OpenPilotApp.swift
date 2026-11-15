@@ -17,7 +17,7 @@ struct OpenPilotApp: App {
     }
 
     var body: some Scene {
-        WindowGroup { RootView().onOpenURL { url in DeepLinkSupport.route(url) }.onContinueUserActivity(CSSearchableItemActionType) { SpotlightSupport.handle($0) } }
+        WindowGroup { RootView().onOpenURL { url in DeepLinkSupport.route(url) }.onContinueUserActivity(CSSearchableItemActionType) { SpotlightSupport.handle($0) }.onContinueUserActivity(HandoffSupport.activityType) { HandoffSupport.handle($0) } }
             .modelContainer(container)
     }
 }
