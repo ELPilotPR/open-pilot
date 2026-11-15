@@ -45,6 +45,7 @@ struct ChatView: View {
     @State private var showSummary = false
     @State private var showTranslate = false
     @State private var showAutoTag = false
+    @State private var showRAG = false
     @State private var editImageSource: Data? = nil
     @State private var editImagePrompt = ""
     @State private var showEditImagePrompt = false
@@ -203,6 +204,7 @@ struct ChatView: View {
         .sheet(isPresented: $showSummary) { SummaryView(conversation: current) }
         .sheet(isPresented: $showTranslate) { TranslateView(initialText: messages.last(where: { $0.role == "assistant" })?.text ?? "") }
         .sheet(isPresented: $showAutoTag) { AutoTagView(conversation: current) }
+        .sheet(isPresented: $showRAG) { AttachmentQAView(conversation: current) }
         .alert(T("Edit image", "Editar imagen"), isPresented: $showEditImagePrompt) {
             TextField(T("Describe the change…", "Describe el cambio…"), text: $editImagePrompt)
             Button(T("Cancel", "Cancelar"), role: .cancel) { editImageSource = nil }
@@ -796,6 +798,9 @@ struct ChatView: View {
                     }
                     Button { showAutoTag = true; Haptic.light() } label: {
                         Label(T("Tags…", "Etiquetas…"), systemImage: "tag")
+                    }
+                    Button { showRAG = true; Haptic.light() } label: {
+                        Label(T("Ask attachments…", "Preguntar a adjuntos…"), systemImage: "doc.text.magnifyingglass")
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle").font(.system(size: 18, weight: .medium))
