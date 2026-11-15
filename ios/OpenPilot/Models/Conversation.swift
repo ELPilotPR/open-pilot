@@ -17,6 +17,8 @@ final class Conversation {
     var isArchived: Bool = false
     /// Proyecto al que pertenece (nil = sin proyecto). Migración ligera.
     var projectID: UUID?
+    /// Etiquetas (auto o manuales) para carpetas inteligentes. Migración ligera.
+    var tags: [String] = []
     /// Chat temporal: no usa memoria, no aparece en el historial y se borra al salir.
     var isTemporary: Bool = false
     @Relationship(deleteRule: .cascade, inverse: \Message.conversation)

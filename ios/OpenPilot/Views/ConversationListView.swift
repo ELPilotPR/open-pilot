@@ -24,6 +24,7 @@ struct SidebarView: View {
     @State private var importError: String?
     @State private var showImportError = false
     @State private var showGlobalSearch = false
+    @State private var showSmartFolders = false
     @AppStorage("selectedProviderID") private var selectedProviderID = "casa"
     @AppStorage("selectedModel") private var selectedModel = "swift-iq3_s"
 
@@ -76,6 +77,9 @@ struct SidebarView: View {
             .sheet(isPresented: $showGlobalSearch) {
                 GlobalSearchView { c in current = c; close() }
             }
+            .sheet(isPresented: $showSmartFolders) {
+                SmartFoldersView { c in current = c; close() }
+            }
 
             Button { Haptic.light(); current = nil; close() } label: {
                 Label(T("New chat", "Nuevo chat"), systemImage: "square.and.pencil")
@@ -100,6 +104,16 @@ struct SidebarView: View {
 
             Button { Haptic.light(); showImportPicker = true } label: {
                 Label(T("Import chat", "Importar chat"), systemImage: "square.and.arrow.down")
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(OP.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 12).padding(.vertical, 6)
+            }
+            .buttonStyle(ScaleButtonStyle())
+            .padding(.horizontal, 12).padding(.bottom, 8)
+
+            Button { Haptic.light(); showSmartFolders = true } label: {
+                Label(T("Smart folders", "Carpetas inteligentes"), systemImage: "folder")
                     .font(.footnote.weight(.medium))
                     .foregroundStyle(OP.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
