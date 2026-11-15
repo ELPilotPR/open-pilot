@@ -98,6 +98,17 @@ struct SettingsView: View {
 
             Section {
                 NavigationLink {
+                    PromptLibraryView()
+                } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(T("Prompt library", "Librería de prompts")).foregroundStyle(OP.textPrimary)
+                        Text(T("Reusable prompts, insert with /", "Prompts reutilizables, inserta con /")).font(.caption).foregroundStyle(OP.textSecondary)
+                    }
+                }
+            }
+
+            Section {
+                NavigationLink {
                     MemoryView()
                 } label: {
                     VStack(alignment: .leading, spacing: 2) {

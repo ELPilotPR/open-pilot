@@ -13,6 +13,8 @@ struct ChatView: View {
     @Query private var providers: [ProviderConfig]
     @StateObject private var vm = ChatViewModel()
     @State private var input = ""
+    @State private var library = PromptLibrary.shared
+    @State private var showPromptLibrary = false
     @State private var browse = false
     @State private var imageMode = false
     @State private var atBottom = true
@@ -138,6 +140,7 @@ struct ChatView: View {
         }
         .background(OP.canvas.ignoresSafeArea())
         .onAppear { runDemoIfNeeded() }
+        .sheet(isPresented: $showPromptLibrary) { NavigationStack { PromptLibraryView() } }
         .animation(.easeInOut(duration: 0.2), value: vm.statusText == nil)
         .onChange(of: imageMode) { _, on in if on { probeIfNeeded() } }
         .onChange(of: activeProvider?.id) { _, _ in if imageMode { probeIfNeeded() } }
@@ -217,6 +220,7 @@ struct ChatView: View {
         if args.contains("-demoSearch") { demoSearch(); return }
         if args.contains("-demoMath") { demoMath(); return }
         if args.contains("-demoExport") { demoExport(); return }
+        if args.contains("-demoPrompts") { demoPrompts(); return }
         if args.contains("-demoCI") {
             CustomInstructions.aboutYou = "Soy Javier, desarrollador en Wisconsin. Trabajo en iOS y crypto."
             CustomInstructions.responsePrefs = "Responde siempre en español, directo y con tablas cuando haya datos."
@@ -833,10 +837,26 @@ struct ChatView: View {
         }
     }
 
+    /// Demo OFFLINE de prompts: muestra el panel de slash commands sobre el composer.
+    private func demoPrompts() {
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            if !library.prompts.contains(where: { $0.title == "Traducir" }) {
+                library.add(title: "Traducir", body: "Traduce al inglés manteniendo el tono:\n\n")
+            }
+            input = "/tr"
+            composerFocused = true
+        }
+    }
+
     // MARK: - Composer
 
     private var composer: some View {
-        HStack(alignment: .bottom, spacing: 6) {
+        VStack(spacing: 6) {
+            if !slashMatches.isEmpty {
+                slashPanel
+            }
+            HStack(alignment: .bottom, spacing: 6) {
             Menu {
                 PhotosPicker(selection: $photoItem, matching: .images) {
                     Label(T("Choose photo", "Elegir foto"), systemImage: "photo.on.rectangle")
@@ -844,6 +864,7 @@ struct ChatView: View {
                 Button { showCamera = true } label: { Label(T("Camera", "Cámara"), systemImage: "camera") }
                 Button { showFilePicker = true } label: { Label(T("Attach file", "Adjuntar archivo"), systemImage: "doc") }
                 Button { openCanvasFromChat() } label: { Label("Canvas", systemImage: "square.and.pencil") }
+                Button { showPromptLibrary = true } label: { Label(T("Prompt library", "Librería de prompts"), systemImage: "sparkles") }
             } label: {
                 Image(systemName: "plus").font(.system(size: 18, weight: .medium))
                     .foregroundStyle(OP.textPrimary)
@@ -940,6 +961,42 @@ struct ChatView: View {
         .clipShape(RoundedRectangle(cornerRadius: 26))
         .overlay(RoundedRectangle(cornerRadius: 26).stroke(OP.border, lineWidth: 1))
         .padding(.horizontal, 12).padding(.bottom, 8).padding(.top, 4)
+        }
+    }
+
+    private var slashMatches: [Prompt] {
+        PromptLibrary.suggestions(for: input, in: library.prompts)
+    }
+
+    private var slashPanel: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(slashMatches.prefix(5))) { p in
+                Button {
+                    input = p.body
+                    composerFocused = true
+                    Haptic.selection()
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "sparkles").foregroundStyle(OP.accent)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(p.title).font(.subheadline.weight(.medium)).foregroundStyle(OP.textPrimary)
+                            Text(p.body).font(.caption).foregroundStyle(OP.textSecondary).lineLimit(1)
+                        }
+                        Spacer()
+                    }
+                    .padding(.horizontal, 14).padding(.vertical, 9)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                if p.id != slashMatches.prefix(5).last?.id {
+                    Divider().padding(.leading, 40)
+                }
+            }
+        }
+        .background(OP.elevated)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(OP.border, lineWidth: 1))
+        .padding(.horizontal, 12)
     }
 
     private var canSend: Bool {
