@@ -11,6 +11,8 @@ struct SettingsView: View {
     @AppStorage("customInstructionsEnabled") private var ciEnabled = true
     @AppStorage("customAboutYou") private var ciAbout = ""
     @AppStorage("customResponsePrefs") private var ciPrefs = ""
+    @AppStorage("context.autoCompact") private var autoCompact = true
+    @AppStorage("context.budget") private var contextBudget = 6000
 
     var body: some View {
         List {
@@ -77,6 +79,22 @@ struct SettingsView: View {
                 Text(T("Responses", "Respuestas"))
             } footer: {
                 Text(T("Concise: short, direct answers. Detailed: in-depth analysis.", "Conciso: respuesta directa y corta. Detallado: análisis a fondo."))
+            }
+
+            Section {
+                Toggle(T("Auto-compact context", "Auto-compactar contexto"), isOn: $autoCompact)
+                Picker(T("Context budget", "Presupuesto de contexto"), selection: $contextBudget) {
+                    Text("2k tokens").tag(2000)
+                    Text("4k tokens").tag(4000)
+                    Text("6k tokens").tag(6000)
+                    Text("8k tokens").tag(8000)
+                    Text("12k tokens").tag(12000)
+                }
+            } header: {
+                Text(T("Context", "Contexto"))
+            } footer: {
+                Text(T("When a chat grows past the budget, older messages are condensed into a summary so it stays within the model's window. Recent messages are kept verbatim.",
+                       "Cuando un chat supera el presupuesto, los mensajes antiguos se condensan en un resumen para no exceder la ventana del modelo. Los recientes se conservan intactos."))
             }
 
             Section {

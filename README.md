@@ -23,13 +23,14 @@
 - **Projects & automatic memory** — group chats into projects with their own instructions; the app remembers facts about you across chats (editable in Settings).
 - **Prompt library & slash commands** — save reusable prompts and insert them by typing `/` in the composer (filtered live as you type). Manage them in Settings or the + menu.
 - **Code interpreter** — run JavaScript in an on-device sandbox (no network or file access) straight from a code block, and render `csv` blocks as bar charts. Nothing leaves the device.
+- **Context management** — a live token estimate above the composer, plus automatic compaction that condenses older messages into a summary when a chat grows past your chosen budget (recent messages stay verbatim).
 - **Temporary chat** — a private mode that uses no memory and is never saved to history.
 - **Organize** — pin and archive conversations; the sidebar groups by date.
 - **Quality-of-life** — smart titles, regenerate, 👍/👎 feedback on replies, search within a conversation, response-length control, tokens/sec + token counts, tap-anywhere to dismiss the keyboard.
 - **English / Español** — follows the device language, with a manual override.
 - **Appearance** — Automatic / Light / Dark.
 - **Local-first storage** via SwiftData; **API keys in the device Keychain**. No server in the middle.
-- **Tested** — an XCTest suite covers the version tree, model catalog, custom instructions, file parsing, citations, Canvas helpers, projects, memory, feedback, temporary chat, in-conversation search, LaTeX parsing, export/import round-trips, prompt slash matching, JavaScript sandbox execution, and CSV parsing.
+- **Tested** — an XCTest suite covers the version tree, model catalog, custom instructions, file parsing, citations, Canvas helpers, projects, memory, feedback, temporary chat, in-conversation search, LaTeX parsing, export/import round-trips, prompt slash matching, JavaScript sandbox execution, CSV parsing, and context compaction.
 
 ## Privacy
 
@@ -72,6 +73,7 @@ ios/            Native iOS app (SwiftUI + SwiftData)
 - [x] Projects + automatic memory, 👍/👎 feedback, temporary chat, in-conversation search
 - [x] Prompt library with `/` slash commands
 - [x] On-device code interpreter (sandboxed JavaScript) + CSV → charts
+- [x] Context token indicator + automatic compaction
 - [ ] On-device models (MLX / llama.cpp)
 - [ ] Windows / Android / desktop clients
 

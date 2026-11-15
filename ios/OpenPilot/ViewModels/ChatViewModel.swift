@@ -83,6 +83,13 @@ final class ChatViewModel: ObservableObject {
         task = Task { [weak self] in
             guard let self else { return }
             var turns = history
+            if ContextSettings.autoCompact {
+                let plan = ContextManager.compact(turns, budget: ContextSettings.budgetTokens)
+                if plan.didCompact {
+                    turns = plan.compacted
+                    self.statusText = T("Compacting context…", "Compactando contexto…")
+                }
+            }
             var systemPrompt = ResponseStyle.current.systemPrompt
             let custom = CustomInstructions.systemPrompt
             if !custom.isEmpty { systemPrompt = custom + "\n\n" + systemPrompt }

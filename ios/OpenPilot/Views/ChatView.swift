@@ -222,6 +222,7 @@ struct ChatView: View {
         if args.contains("-demoExport") { demoExport(); return }
         if args.contains("-demoPrompts") { demoPrompts(); return }
         if args.contains("-demoCode") { demoCode(); return }
+        if args.contains("-demoContext") { demoContext(); return }
         if args.contains("-demoCI") {
             CustomInstructions.aboutYou = "Soy Javier, desarrollador en Wisconsin. Trabajo en iOS y crypto."
             CustomInstructions.responsePrefs = "Responde siempre en español, directo y con tablas cuando haya datos."
@@ -889,10 +890,60 @@ struct ChatView: View {
         }
     }
 
+    /// Demo OFFLINE de contexto largo: indicador de tokens por encima del presupuesto.
+    private func demoContext() {
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            let conv = Conversation(title: "Demo contexto", providerID: activeProvider?.id ?? "casa", model: activeModel)
+            context.insert(conv); current = conv
+            let now = Date()
+            var prev: UUID?
+            for i in 0..<14 {
+                let role = i % 2 == 0 ? "user" : "assistant"
+                let body = String(repeating: "Este es un mensaje de prueba con contenido suficiente para sumar tokens al contexto. ", count: 24)
+                let m = Message(role: role, text: "[\(i + 1)] \(body)")
+                m.createdAt = now.addingTimeInterval(Double(i))
+                m.parentID = prev
+                if let p = prev, let parent = conv.messages.first(where: { $0.id == p }) { parent.preferredChildID = m.id }
+                m.conversation = conv; conv.messages.append(m); context.insert(m)
+                prev = m.id
+            }
+            conv.activeLeafID = prev
+            try? context.save()
+        }
+    }
+
     // MARK: - Composer
+
+    /// Estimated token size of the current conversation's active context.
+    private var contextTokens: Int {
+        guard let c = current else { return 0 }
+        return ContextManager.estimateTokens(c.activeMessages.map { ChatTurn(role: $0.role, content: $0.text) })
+    }
+
+    /// Subtle context-size indicator above the composer; turns orange near the budget.
+    private var contextBar: some View {
+        let budget = ContextSettings.budgetTokens
+        let over = ContextSettings.autoCompact && contextTokens > budget
+        return HStack(spacing: 5) {
+            Image(systemName: "text.alignleft").font(.system(size: 10))
+            Text("≈ \(contextTokens) tokens")
+                .font(.caption2.monospacedDigit())
+            if over {
+                Text(T("· auto-compact on", "· auto-compacción activa"))
+                    .font(.caption2)
+            }
+            Spacer(minLength: 0)
+        }
+        .foregroundStyle(over ? Color.orange : OP.textTertiary)
+        .padding(.horizontal, 16)
+    }
 
     private var composer: some View {
         VStack(spacing: 6) {
+            if let c = current, !c.activeMessages.isEmpty {
+                contextBar
+            }
             if !slashMatches.isEmpty {
                 slashPanel
             }
