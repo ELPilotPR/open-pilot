@@ -25,6 +25,7 @@ targets:
       - package: SwiftMath
       - target: OpenPilotShare
       - target: OpenPilotWidget
+      - sdk: ActivityKit.framework
     entitlements:
       path: OpenPilot/OpenPilot.entitlements
       properties:
@@ -37,6 +38,7 @@ targets:
         CFBundleShortVersionString: "0.1.0"
         CFBundleVersion: "1"
         ITSAppUsesNonExemptEncryption: false
+        NSSupportsLiveActivities: true
         CFBundleURLTypes:
           - CFBundleURLName: com.openpilot.app
             CFBundleURLSchemes:
@@ -105,9 +107,12 @@ targets:
     sources:
       - WidgetExtension
       - path: OpenPilot/Services/WidgetSnapshot.swift
+      - path: OpenPilot/Services/ChatActivityAttributes.swift
+      - path: OpenPilot/Services/LiveActivitySupport.swift
     dependencies:
       - sdk: WidgetKit.framework
       - sdk: SwiftUI.framework
+      - sdk: ActivityKit.framework
     entitlements:
       path: WidgetExtension/WidgetExtension.entitlements
       properties:

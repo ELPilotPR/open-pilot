@@ -120,10 +120,50 @@ struct QuickActionsWidget: Widget {
     }
 }
 
+// MARK: - Live Activity (streaming)
+
+struct ChatLiveActivity: Widget {
+    var body: some WidgetConfiguration {
+        ActivityConfiguration(for: ChatActivityAttributes.self) { context in
+            VStack(alignment: .leading, spacing: 4) {
+                Label(context.attributes.title, systemImage: "paperplane.fill")
+                    .font(.caption.weight(.semibold))
+                Text(LiveActivitySupport.statusLabel(context.state.status))
+                    .font(.caption2).foregroundStyle(.secondary)
+                if !context.state.snippet.isEmpty {
+                    Text(context.state.snippet).font(.caption2).lineLimit(2)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding()
+            .activityBackgroundTint(.black.opacity(0.55))
+        } dynamicIsland: { context in
+            DynamicIsland {
+                DynamicIslandExpandedRegion(.leading) {
+                    Image(systemName: "paperplane.fill").foregroundStyle(.tint)
+                }
+                DynamicIslandExpandedRegion(.trailing) {
+                    Text(LiveActivitySupport.statusLabel(context.state.status)).font(.caption2)
+                }
+                DynamicIslandExpandedRegion(.bottom) {
+                    Text(context.state.snippet).font(.caption2).lineLimit(2)
+                }
+            } compactLeading: {
+                Image(systemName: "paperplane.fill").foregroundStyle(.tint)
+            } compactTrailing: {
+                Image(systemName: "ellipsis").symbolRenderingMode(.hierarchical)
+            } minimal: {
+                Image(systemName: "paperplane.fill").foregroundStyle(.tint)
+            }
+        }
+    }
+}
+
 @main
 struct OpenPilotWidgets: WidgetBundle {
     var body: some Widget {
         RecentChatsWidget()
         QuickActionsWidget()
+        ChatLiveActivity()
     }
 }

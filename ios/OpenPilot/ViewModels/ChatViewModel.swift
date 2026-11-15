@@ -141,12 +141,13 @@ final class ChatViewModel: ObservableObject {
                 }
                 self.statusText = nil
                 let stream = prov.stream(turns: turns, model: model, baseURL: baseURL, apiKey: apiKey)
+                LiveActivityController.shared.start(title: conversation.title)
                 let genStart = Date()
                 var usagePrompt = 0, usageCompletion = 0
                 for try await ev in stream {
                     if Task.isCancelled { break }
                     switch ev {
-                    case .delta(let t): assistant.text += t
+                    case .delta(let t): assistant.text += t; LiveActivityController.shared.update(snippet: assistant.text)
                     case .reasoning(let r): assistant.reasoning += r
                     case .usage(let p, let c): usagePrompt = p; usageCompletion = c
                     case .done: break
@@ -178,6 +179,7 @@ final class ChatViewModel: ObservableObject {
                     }
                 }
             }
+            LiveActivityController.shared.end()
             self.statusText = nil
             try? context.save()
             self.isStreaming = false
@@ -208,7 +210,7 @@ final class ChatViewModel: ObservableObject {
                 for try await ev in stream {
                     if Task.isCancelled { return false }
                     switch ev {
-                    case .delta(let t): assistant.text += t
+                    case .delta(let t): assistant.text += t; LiveActivityController.shared.update(snippet: assistant.text)
                     case .reasoning(let r): assistant.reasoning += r
                     case .usage(let p, let c): usagePrompt = p; usageCompletion = c
                     case .done: break
