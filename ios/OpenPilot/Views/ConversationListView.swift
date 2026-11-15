@@ -23,6 +23,7 @@ struct SidebarView: View {
     @State private var showImportPicker = false
     @State private var importError: String?
     @State private var showImportError = false
+    @State private var showGlobalSearch = false
     @AppStorage("selectedProviderID") private var selectedProviderID = "casa"
     @AppStorage("selectedModel") private var selectedModel = "swift-iq3_s"
 
@@ -65,9 +66,16 @@ struct SidebarView: View {
                         Image(systemName: "xmark.circle.fill").foregroundStyle(OP.textTertiary)
                     }
                 }
+                Button { showGlobalSearch = true } label: {
+                    Image(systemName: "text.magnifyingglass").foregroundStyle(OP.accent)
+                }
+                .accessibilityLabel(T("Search all messages", "Buscar en todos los mensajes"))
             }
             .padding(10).background(OP.elevated).clipShape(RoundedRectangle(cornerRadius: 12))
             .padding(12)
+            .sheet(isPresented: $showGlobalSearch) {
+                GlobalSearchView { c in current = c; close() }
+            }
 
             Button { Haptic.light(); current = nil; close() } label: {
                 Label(T("New chat", "Nuevo chat"), systemImage: "square.and.pencil")
