@@ -19,8 +19,8 @@ struct LocalModelsView: View {
             } header: {
                 Text(T("Recommended", "Recomendados"))
             } footer: {
-                Text(T("Models run fully on-device with llama.cpp. Download over Wi-Fi; larger models need more RAM.",
-                       "Los modelos corren en el dispositivo con llama.cpp. Descarga por Wi-Fi; los grandes necesitan mas RAM."))
+                Text(T("This iPhone has ~\(String(format: "%.0f", DeviceHealth.physicalRAMGB)) GB RAM. Models run fully on-device with llama.cpp; download over Wi-Fi. Larger models need more RAM.",
+                       "Este iPhone tiene ~\(String(format: "%.0f", DeviceHealth.physicalRAMGB)) GB de RAM. Los modelos corren en el dispositivo con llama.cpp; descarga por Wi-Fi. Los grandes necesitan mas RAM."))
             }
             Section(T("Custom model", "Modelo propio")) {
                 TextField(T("Hugging Face repo (owner/name)", "Repo de Hugging Face (owner/name)"), text: $customID)
@@ -47,6 +47,16 @@ struct LocalModelsView: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title).foregroundStyle(OP.textPrimary)
             Text(subtitle).font(.caption).foregroundStyle(OP.textSecondary)
+            if let model = GGUFSupport.model(for: filename) {
+                let fit = DeviceHealth.fit(for: model)
+                HStack(spacing: 4) {
+                    Image(systemName: fit.symbol)
+                    Text(fit.label)
+                }
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(fit.tier == .comfortable ? OP.success : (fit.tier == .tight ? .orange : .red))
+                .accessibilityLabel(fit.label)
+            }
             if let p = progress[filename] {
                 ProgressView(value: p).progressViewStyle(.linear)
             }

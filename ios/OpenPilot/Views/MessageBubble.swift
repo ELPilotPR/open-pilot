@@ -214,15 +214,22 @@ struct MessageRow: View {
 
     /// Velocidad EN VIVO mientras el modelo genera (tok/s pulsante en azul).
     private var liveMetricsView: some View {
-        HStack(spacing: 5) {
+        let thermal = DeviceHealth.thermalTier
+        return HStack(spacing: 5) {
             Image(systemName: "bolt.fill")
                 .symbolEffect(.pulse, options: .repeating, isActive: true)
             Text(LiveSpeed.label(liveTPS))
                 .monospacedDigit()
+            if thermal.shouldWarn {
+                Image(systemName: thermal.symbol)
+                    .foregroundStyle(thermal == .critical ? .red : .orange)
+                    .accessibilityLabel(thermal.label)
+            }
         }
         .font(.caption2.weight(.medium))
         .foregroundStyle(OP.accent)
-        .accessibilityLabel(T("Generating", "Generando") + ", " + LiveSpeed.label(liveTPS))
+        .accessibilityLabel(T("Generating", "Generando") + ", " + LiveSpeed.label(liveTPS)
+                            + (thermal.shouldWarn ? ", " + thermal.label : ""))
     }
 
     private func copyMessage() {
