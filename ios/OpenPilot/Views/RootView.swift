@@ -6,6 +6,7 @@ struct RootView: View {
     @Environment(\.modelContext) private var context
     @Query private var providers: [ProviderConfig]
     @State private var current: Conversation?
+    @AppStorage("accentColor") private var accentColor = "blue"
     @State private var sidebarOpen = false
     @Environment(\.horizontalSizeClass) private var hSize
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
@@ -35,6 +36,7 @@ struct RootView: View {
                 compactBody
             }
         }
+        .id(accentColor)
         .preferredColorScheme(resolvedColorScheme)
         .sheet(isPresented: $showSettings) {
             NavigationStack { SettingsView() }

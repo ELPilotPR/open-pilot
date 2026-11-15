@@ -33,7 +33,7 @@ enum OP {
     static let textPrimary   = dyn("#0D0D0D", "#ECECEC")   // text-primary
     static let textSecondary = dyn("#5D5D5D", "#CDCDCD")   // text-secondary
     static let textTertiary  = dyn("#8F8F8F", "#AFAFAF")   // text-tertiary
-    static let accent        = dyn("#0B6BCB", "#48AAFF")   // icon-accent (más oscuro en claro: mejor contraste WCAG)
+    static var accent: Color { AccentTheme.current().color }   // acento seleccionable por el usuario
     static let composerBg    = dyn("#FFFFFF", "#303030")
     static let border        = dyn("#E8E8E8", "#424242")   // border-default
     static let sendBg        = dyn("#0D0D0D", "#FFFFFF")
@@ -41,4 +41,42 @@ enum OP {
     static let codeBlock     = dyn("#F8F8F8", "#171717")   // bg-code-block
     static let success       = dyn("#10A37F", "#10A37F")   // verde OpenAI
     static let danger        = dyn("#EF4444", "#F87171")
+}
+
+/// Acento seleccionable por el usuario (Settings → Apariencia). Cada color tiene
+/// variante clara y oscura para mantener contraste en ambos modos.
+enum AccentTheme: String, CaseIterable, Identifiable {
+    case blue, indigo, purple, pink, red, orange, green, teal
+    var id: String { rawValue }
+    var label: String { rawValue.capitalized }
+
+    var light: String {
+        switch self {
+        case .blue: return "#0B6BCB"
+        case .indigo: return "#4F46E5"
+        case .purple: return "#7C3AED"
+        case .pink: return "#DB2777"
+        case .red: return "#DC2626"
+        case .orange: return "#EA580C"
+        case .green: return "#059669"
+        case .teal: return "#0D9488"
+        }
+    }
+    var dark: String {
+        switch self {
+        case .blue: return "#48AAFF"
+        case .indigo: return "#818CF8"
+        case .purple: return "#A78BFA"
+        case .pink: return "#F472B6"
+        case .red: return "#F87171"
+        case .orange: return "#FB923C"
+        case .green: return "#34D399"
+        case .teal: return "#2DD4BF"
+        }
+    }
+    var color: Color { OP.dyn(light, dark) }
+
+    static func current(defaults: UserDefaults = .standard) -> AccentTheme {
+        AccentTheme(rawValue: defaults.string(forKey: "accentColor") ?? "blue") ?? .blue
+    }
 }

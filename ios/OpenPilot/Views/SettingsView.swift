@@ -8,6 +8,7 @@ struct SettingsView: View {
     @AppStorage("imageModel") private var imageModel = "dall-e-3"
     @AppStorage("responseStyle") private var responseStyle = "conciso"
     @AppStorage("appearanceMode") private var appearanceMode = "auto"
+    @AppStorage("accentColor") private var accentColor = "blue"
     @AppStorage("customInstructionsEnabled") private var ciEnabled = true
     @AppStorage("customAboutYou") private var ciAbout = ""
     @AppStorage("customResponsePrefs") private var ciPrefs = ""
@@ -35,6 +36,11 @@ struct SettingsView: View {
                     Text(T("Light", "Claro")).tag("light")
                     Text(T("Dark", "Oscuro")).tag("dark")
                 }
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(T("Accent color", "Color de acento")).font(.subheadline).foregroundStyle(OP.textSecondary)
+                    AccentSwatchPicker(selection: $accentColor)
+                }
+                .padding(.vertical, 2)
             } header: {
                 Text(T("Appearance", "Apariencia"))
             } footer: {
