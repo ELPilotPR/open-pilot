@@ -45,7 +45,7 @@ struct RootView: View {
         .sheet(isPresented: $demoMemory) {
             NavigationStack { MemoryView() }
         }
-        .task { purgeTemporary(); seedIfNeeded(); demoSidebarIfNeeded(); demoModelsIfNeeded(); demoProjectsIfNeeded(); demoMemoryIfNeeded(); demoShareIfNeeded(); consumePendingShare(); consumeIntentFlags() }
+        .task { purgeTemporary(); seedIfNeeded(); demoSidebarIfNeeded(); demoModelsIfNeeded(); demoProjectsIfNeeded(); demoMemoryIfNeeded(); demoShareIfNeeded(); demoOnDeviceIfNeeded(); consumePendingShare(); consumeIntentFlags() }
         .onChange(of: scenePhase) { _, phase in if phase == .active { consumePendingShare(); consumeIntentFlags() } }
         .onChange(of: current?.id) { oldID, newID in
             guard let oldID, oldID != newID else { return }
@@ -115,6 +115,13 @@ struct RootView: View {
             d.removeObject(forKey: IntentSupport.newChatFlag)
             current = nil
         }
+    }
+
+    /// Demo offline: abre el editor del proveedor on-device con su estado real.
+    private func demoOnDeviceIfNeeded() {
+        guard CommandLine.arguments.contains("-demoOnDevice") else { return }
+        demoProvider = ProviderConfig(id: "demo-ondevice", name: "On-device", kind: "ondevice",
+                                      baseURL: "", models: ["apple-intelligence"])
     }
 
     private func demoShareIfNeeded() {

@@ -15,12 +15,20 @@ struct ProviderEditorView: View {
                 Picker(T("Type", "Tipo"), selection: $provider.kind) {
                     Text("OpenAI-compatible").tag("openai")
                     Text("Anthropic").tag("anthropic")
+                    Text("On-device (Apple Intelligence)").tag("ondevice")
                 }
-                TextField("Base URL", text: $provider.baseURL)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .keyboardType(.URL)
-                SecureField(T("API Key (optional)", "API Key (opcional)"), text: $provider.apiKey)
+                if provider.kind == "ondevice" {
+                    LabeledContent(T("Status", "Estado"), value: OnDeviceProvider.currentStatus())
+                        .font(.callout)
+                    Text(T("Runs Apple's on-device model (Apple Intelligence). No server, no API key, no model download. Requires a compatible device with iOS 26+.", "Ejecuta el modelo on-device de Apple (Apple Intelligence). Sin servidor, sin API key, sin descarga. Requiere un dispositivo compatible con iOS 26+."))
+                        .font(.caption).foregroundStyle(.secondary)
+                } else {
+                    TextField("Base URL", text: $provider.baseURL)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .keyboardType(.URL)
+                    SecureField(T("API Key (optional)", "API Key (opcional)"), text: $provider.apiKey)
+                }
             }
 
             Section {

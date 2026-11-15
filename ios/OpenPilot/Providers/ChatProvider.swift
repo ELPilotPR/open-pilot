@@ -38,7 +38,11 @@ protocol ChatProvider {
 
 enum ProviderFactory {
     static func make(kind: String) -> ChatProvider {
-        kind == "anthropic" ? AnthropicProvider() : OpenAICompatibleProvider()
+        switch kind {
+        case "anthropic": return AnthropicProvider()
+        case "ondevice": return OnDeviceProvider()
+        default: return OpenAICompatibleProvider()
+        }
     }
 }
 

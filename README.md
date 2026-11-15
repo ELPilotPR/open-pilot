@@ -17,6 +17,7 @@
 - **Deep research** — the model plans sub-queries, the app searches and reads the web, then synthesizes a cited report (client-side, no backend).
 - **Share extension** — share text, links or images from any app straight into a new Open Pilot conversation (via a shared App Group, no backend).
 - **Siri & Shortcuts** — ask your model a question, start a new chat, or jump into live voice mode through App Intents (on-device, no backend).
+- **On-device model** — use Apple Intelligence's on-device model (FoundationModels) as a provider: no server, no API key, no model download. Requires a compatible device (iOS 26+); the provider editor shows live availability.
 - **Voice** — dictate messages with on-device speech recognition, read replies aloud with a **pickable device voice**, and a **live voice mode** for continuous hands-free conversation (listen → reply → listen) with **barge-in** (interrupt the assistant by speaking).
 - **Attachments** — photos from library or camera, plus **files** (PDF, documents, code) extracted into the model's context.
 - **Canvas** — a side editor for code or text you can revise by hand or ask the model to change, with navigable versions. A **Code / Preview** toggle renders HTML & JavaScript in an on-device WebView and draws **Mermaid** diagrams fully offline (bundled mermaid.js).
@@ -87,7 +88,7 @@ ios/            Native iOS app (SwiftUI + SwiftData)
 - [x] Prompt library with `/` slash commands
 - [x] On-device code interpreter (sandboxed JavaScript) + CSV → charts
 - [x] Context token indicator + automatic compaction
-- [ ] On-device models (MLX / llama.cpp)
+- [x] On-device model (Apple Intelligence / FoundationModels)
 - [ ] Windows / Android / desktop clients
 
 ## License
