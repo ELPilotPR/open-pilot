@@ -37,6 +37,8 @@
 	<string>Open Pilot accede a tus fotos para adjuntarlas al chat.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Open Pilot convierte tu voz en texto para escribir en el chat.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Open Pilot busca servidores Ollama y LM Studio en tu red Wi-Fi para conectar tus modelos locales. Nada sale de tu red.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

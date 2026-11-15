@@ -7,6 +7,9 @@ struct ProviderEditorView: View {
     @State private var testing = false
     @State private var testResult: String?
     @State private var newModel = ""
+    @State private var scanning = false
+    @State private var foundServers: [LocalServer] = []
+    @State private var scanStatus: String?
 
     var body: some View {
         Form {
@@ -28,6 +31,45 @@ struct ProviderEditorView: View {
                         .autocorrectionDisabled()
                         .keyboardType(.URL)
                     SecureField(T("API Key (optional)", "API Key (opcional)"), text: $provider.apiKey)
+                }
+            }
+
+            if provider.kind != "ondevice" {
+                Section {
+                    Button { scanLocal() } label: {
+                        if scanning {
+                            HStack(spacing: 8) { ProgressView(); Text(T("Scanning network…", "Escaneando la red…")) }
+                        } else {
+                            Label(T("Discover Ollama / LM Studio", "Descubrir Ollama / LM Studio"), systemImage: "dot.radiowaves.left.and.right")
+                        }
+                    }
+                    .disabled(scanning)
+                    Menu {
+                        Button("Ollama · http://localhost:11434/v1") { provider.baseURL = "http://localhost:11434/v1"; provider.kind = "openai" }
+                        Button("Ollama LAN · http://192.168.1.50:11434/v1") { provider.baseURL = "http://192.168.1.50:11434/v1"; provider.kind = "openai" }
+                        Button("LM Studio · http://localhost:1234/v1") { provider.baseURL = "http://localhost:1234/v1"; provider.kind = "openai" }
+                    } label: {
+                        Label(T("Use a common address", "Usar una dirección común"), systemImage: "link")
+                    }
+                    ForEach(foundServers) { srv in
+                        Button {
+                            provider.baseURL = srv.baseURL
+                            provider.kind = "openai"
+                            for m in srv.models where !provider.models.contains(m) { provider.models.append(m) }
+                            try? context.save()
+                        } label: {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("\(srv.name) · \(srv.baseURL)").font(.callout)
+                                Text(srv.models.isEmpty ? T("no models listed", "sin modelos listados") : srv.models.prefix(4).joined(separator: ", "))
+                                    .font(.caption2).foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                    if let st = scanStatus { Text(st).font(.caption).foregroundStyle(.secondary) }
+                } header: {
+                    Text(T("Local servers", "Servidores locales"))
+                } footer: {
+                    Text(T("Finds Ollama (:11434) and LM Studio (:1234) on your Wi-Fi network and fills the base URL + models. Nothing leaves your network.", "Encuentra Ollama (:11434) y LM Studio (:1234) en tu red Wi-Fi y rellena la base URL + modelos. Nada sale de tu red."))
                 }
             }
 
@@ -123,6 +165,26 @@ struct ProviderEditorView: View {
         provider.models.append(m)
         newModel = ""
         try? context.save()
+    }
+
+    private func scanLocal() {
+        scanning = true
+        foundServers = []
+        scanStatus = nil
+        Task { @MainActor in
+            guard let ip = LocalServerDiscovery.currentIPv4(),
+                  let subnet = LocalServerDiscovery.subnetPrefix(ofIPv4: ip) else {
+                scanStatus = T("No local network detected. Type the base URL by hand (e.g. http://192.168.1.50:11434/v1).", "No se detectó red local. Escribe la base URL a mano (ej. http://192.168.1.50:11434/v1).")
+                scanning = false
+                return
+            }
+            let servers = await LocalServerDiscovery.scan(subnet: subnet)
+            foundServers = servers
+            scanStatus = servers.isEmpty
+                ? T("No Ollama/LM Studio found on \(subnet).0/24. Make sure the server is running and on the same Wi-Fi.", "No se encontró Ollama/LM Studio en \(subnet).0/24. Asegúrate de que el servidor esté activo y en el mismo Wi-Fi.")
+                : T("Found \(servers.count) server(s). Tap one to use it.", "\(servers.count) servidor(es). Toca uno para usarlo.")
+            scanning = false
+        }
     }
 
     private func discover() {
