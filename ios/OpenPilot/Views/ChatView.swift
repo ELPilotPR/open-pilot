@@ -37,6 +37,9 @@ struct ChatView: View {
     @State private var showCompare = false
     @StateObject private var compare = ModelCompare(columns: [])
     @State private var showVoicePicker = false
+    @State private var editImageSource: Data? = nil
+    @State private var editImagePrompt = ""
+    @State private var showEditImagePrompt = false
     @FocusState private var composerFocused: Bool
     @AppStorage("selectedProviderID") private var selectedProviderID = "casa"
     @AppStorage("selectedModel") private var selectedModel = "swift-iq3_s"
@@ -184,6 +187,18 @@ struct ChatView: View {
             CompareView(compare: compare, providers: providers)
         }
         .sheet(isPresented: $showVoicePicker) { VoicePickerView() }
+        .alert(T("Edit image", "Editar imagen"), isPresented: $showEditImagePrompt) {
+            TextField(T("Describe the change…", "Describe el cambio…"), text: $editImagePrompt)
+            Button(T("Cancel", "Cancelar"), role: .cancel) { editImageSource = nil }
+            Button(T("Edit", "Editar")) {
+                if let p = activeProvider, let c = current, let src = editImageSource {
+                    vm.editImage(prompt: editImagePrompt, source: src, conversation: c, provider: p, context: context, imageModel: imageModel)
+                }
+                editImageSource = nil
+            }
+        } message: {
+            Text(T("The model will redraw the image following your instruction.", "El modelo redibujará la imagen siguiendo tu instrucción."))
+        }
         .onReceive(NotificationCenter.default.publisher(for: .openCanvas)) { note in
             let lang = note.userInfo?["lang"] as? String ?? ""
             let code = note.userInfo?["code"] as? String ?? ""
@@ -234,6 +249,7 @@ struct ChatView: View {
         if args.contains("-demoMermaid") { demoMermaid(); return }
         if args.contains("-demoCompare") { demoCompare(); return }
         if args.contains("-demoVoice") { demoVoice(); return }
+        if args.contains("-demoImageEdit") { demoImageEdit(); return }
         if args.contains("-demoCI") {
             CustomInstructions.aboutYou = "Soy Javier, desarrollador en Wisconsin. Trabajo en iOS y crypto."
             CustomInstructions.responsePrefs = "Responde siempre en español, directo y con tablas cuando haya datos."
@@ -822,6 +838,16 @@ struct ChatView: View {
                             MessageRow(message: m, isActive: vm.isStreaming && idx == messages.count - 1,
                                        onRegenerate: (!vm.isStreaming && !showSearch && m.role == "assistant" && idx == messages.count - 1) ? { regenerate() } : nil,
                                        onEdit: (!vm.isStreaming && !showSearch && m.role == "user") ? { startEdit(m) } : nil,
+                                       onVariation: (!vm.isStreaming && m.role == "assistant" && !m.imageData.isEmpty) ? {
+                                           if let p = activeProvider, let c = current {
+                                               vm.variationImage(source: m.imageData, conversation: c, provider: p, context: context, imageModel: imageModel)
+                                           }
+                                       } : nil,
+                                       onEditImage: (!vm.isStreaming && m.role == "assistant" && !m.imageData.isEmpty) ? {
+                                           editImageSource = m.imageData
+                                           editImagePrompt = ""
+                                           showEditImagePrompt = true
+                                       } : nil,
                                        versionCurrent: sibs.count > 1 ? m.version : 0,
                                        versionTotal: sibs.count > 1 ? sibs.count : 0,
                                        onSwitchVersion: { target in switchVersion(m, to: target) })
@@ -942,6 +968,39 @@ struct ChatView: View {
             try? await Task.sleep(nanoseconds: 500_000_000)
             showVoicePicker = true
         }
+    }
+
+    /// DEMO offline: siembra una imagen generada (mock) con botones Variación/Editar.
+    private func demoImageEdit() {
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            let c = Conversation(title: "Demo imagen", providerID: activeProvider?.id ?? "casa", model: activeModel)
+            context.insert(c)
+            let u = Message(role: "user", text: "Dibuja un atardecer sobre el mar")
+            u.conversation = c; c.messages.append(u); context.insert(u)
+            let a = Message(role: "assistant", text: "")
+            a.imageData = Self.mockImageData()
+            a.parentID = u.id; u.preferredChildID = a.id
+            a.conversation = c; c.messages.append(a); context.insert(a)
+            c.activeLeafID = a.id
+            try? context.save()
+            current = c
+        }
+    }
+
+    /// Imagen mock (gradiente + sol) para demos offline; no toca la red.
+    nonisolated static func mockImageData() -> Data {
+        let size = CGSize(width: 512, height: 512)
+        let renderer = UIGraphicsImageRenderer(size: size)
+        let img = renderer.image { ctx in
+            let colors = [UIColor.systemOrange.cgColor, UIColor.systemPurple.cgColor] as CFArray
+            if let grad = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors, locations: [0, 1]) {
+                ctx.cgContext.drawLinearGradient(grad, start: .zero, end: CGPoint(x: 0, y: 512), options: [])
+            }
+            ctx.cgContext.setFillColor(UIColor.white.withAlphaComponent(0.9).cgColor)
+            ctx.cgContext.fillEllipse(in: CGRect(x: 200, y: 180, width: 112, height: 112))
+        }
+        return img.pngData() ?? Data()
     }
 
     private func openCompare() {

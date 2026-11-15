@@ -178,10 +178,10 @@ final class ChatViewModel: ObservableObject {
         }
     }
 
-    func generateImage(prompt: String, conversation: Conversation, provider: ProviderConfig,
-                       context: ModelContext, imageModel: String) {
+    /// Crea el par user+assistant para un turno de imagen y devuelve el mensaje assistant.
+    private func makeImageTurn(prompt: String, conversation: Conversation, context: ModelContext) -> Message? {
         let trimmed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, !isStreaming else { return }
+        guard !trimmed.isEmpty, !isStreaming else { return nil }
         errorText = nil
         conversation.ensureTree()
 
@@ -207,16 +207,20 @@ final class ChatViewModel: ObservableObject {
             conversation.title = String(trimmed.prefix(40))
         }
         try? context.save()
+        return assistant
+    }
 
-        let baseURL = provider.baseURL
-        let apiKey = provider.apiKey
+    /// Corre una operación de imagen (generar/editar/variar) sobre un turno nuevo.
+    private func runImageTurn(prompt: String, conversation: Conversation, context: ModelContext,
+                              statusEN: String, statusES: String,
+                              operation: @escaping () async throws -> Data) {
+        guard let assistant = makeImageTurn(prompt: prompt, conversation: conversation, context: context) else { return }
         isStreaming = true
-        statusText = T("Generating image…", "Generando imagen…")
+        statusText = T(statusEN, statusES)
         task = Task { [weak self] in
             guard let self else { return }
             do {
-                let data = try await ImageGenerationService.generate(prompt: trimmed, model: imageModel,
-                                                                     baseURL: baseURL, apiKey: apiKey)
+                let data = try await operation()
                 if !Task.isCancelled { assistant.imageData = data }
             } catch {
                 if !Task.isCancelled {
@@ -227,6 +231,40 @@ final class ChatViewModel: ObservableObject {
             self.statusText = nil
             try? context.save()
             self.isStreaming = false
+        }
+    }
+
+    func generateImage(prompt: String, conversation: Conversation, provider: ProviderConfig,
+                       context: ModelContext, imageModel: String) {
+        let trimmed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        let base = provider.baseURL
+        let key = provider.apiKey
+        runImageTurn(prompt: trimmed, conversation: conversation, context: context,
+                     statusEN: "Generating image…", statusES: "Generando imagen…") {
+            try await ImageGenerationService.generate(prompt: trimmed, model: imageModel, baseURL: base, apiKey: key)
+        }
+    }
+
+    /// Image-to-image: edita una imagen existente (p.ej. una generada) con un prompt.
+    func editImage(prompt: String, source: Data, conversation: Conversation, provider: ProviderConfig,
+                   context: ModelContext, imageModel: String) {
+        let trimmed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        let base = provider.baseURL
+        let key = provider.apiKey
+        runImageTurn(prompt: trimmed, conversation: conversation, context: context,
+                     statusEN: "Editing image…", statusES: "Editando imagen…") {
+            try await ImageGenerationService.edit(prompt: trimmed, image: source, model: imageModel, baseURL: base, apiKey: key)
+        }
+    }
+
+    /// Variación de una imagen existente (sin prompt).
+    func variationImage(source: Data, conversation: Conversation, provider: ProviderConfig,
+                        context: ModelContext, imageModel: String) {
+        let base = provider.baseURL
+        let key = provider.apiKey
+        runImageTurn(prompt: T("Variation", "Variación"), conversation: conversation, context: context,
+                     statusEN: "Creating variation…", statusES: "Creando variación…") {
+            try await ImageGenerationService.variation(image: source, model: imageModel, baseURL: base, apiKey: key)
         }
     }
 

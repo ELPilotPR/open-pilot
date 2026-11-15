@@ -159,6 +159,145 @@ struct ImageGenerationService {
         }
         throw ImageGenError.empty
     }
+    // MARK: - Edición / variaciones (image-to-image)
+
+    /// URLRequest puro para /images/edits (OpenAI-compatible, multipart). Testeable sin red.
+    static func editRequest(prompt: String, image: Data, model: String, baseURL: String,
+                            apiKey: String, size: String = "1024x1024") -> URLRequest? {
+        let base = trimBase(baseURL)
+        guard let url = URL(string: base + "/images/edits") else { return nil }
+        var mp = MultipartFormData()
+        mp.addField("model", value: model)
+        mp.addField("prompt", value: prompt)
+        mp.addField("n", value: "1")
+        mp.addField("size", value: size)
+        mp.addFile("image", filename: "image.png", mimeType: "image/png", data: image)
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue(mp.contentType, forHTTPHeaderField: "Content-Type")
+        if !apiKey.isEmpty { req.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization") }
+        req.timeoutInterval = 90
+        req.httpBody = mp.build()
+        return req
+    }
+
+    /// URLRequest puro para /images/variations (multipart, sin prompt). Testeable sin red.
+    static func variationRequest(image: Data, model: String, baseURL: String,
+                                 apiKey: String, size: String = "1024x1024") -> URLRequest? {
+        let base = trimBase(baseURL)
+        guard let url = URL(string: base + "/images/variations") else { return nil }
+        var mp = MultipartFormData()
+        mp.addField("model", value: model)
+        mp.addField("n", value: "1")
+        mp.addField("size", value: size)
+        mp.addFile("image", filename: "image.png", mimeType: "image/png", data: image)
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue(mp.contentType, forHTTPHeaderField: "Content-Type")
+        if !apiKey.isEmpty { req.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization") }
+        req.timeoutInterval = 90
+        req.httpBody = mp.build()
+        return req
+    }
+
+    /// Image-to-image: edita una imagen existente con un prompt.
+    static func edit(prompt: String, image: Data, model: String, baseURL: String,
+                     apiKey: String, size: String = "1024x1024") async throws -> Data {
+        let base = trimBase(baseURL)
+        if isDashScope(base) {
+            return try await dashscopeEdit(prompt: prompt, image: image, model: model, base: base, apiKey: apiKey, size: size)
+        }
+        guard let req = editRequest(prompt: prompt, image: image, model: model, baseURL: base, apiKey: apiKey, size: size) else {
+            throw ImageGenError.badURL(base)
+        }
+        return try await sendMultipart(req)
+    }
+
+    /// Variación de una imagen (sin prompt). DashScope no tiene /variations -> edit con prompt genérico.
+    static func variation(image: Data, model: String, baseURL: String,
+                          apiKey: String, size: String = "1024x1024") async throws -> Data {
+        let base = trimBase(baseURL)
+        if isDashScope(base) {
+            return try await dashscopeEdit(prompt: "Create a variation of this image, keeping the subject and style.",
+                                           image: image, model: model, base: base, apiKey: apiKey, size: size)
+        }
+        guard let req = variationRequest(image: image, model: model, baseURL: base, apiKey: apiKey, size: size) else {
+            throw ImageGenError.badURL(base)
+        }
+        return try await sendMultipart(req)
+    }
+
+    /// Extrae b64_json de una respuesta de imagen (puro, testeable). nil si no hay.
+    static func parseB64Image(_ data: Data) -> Data? {
+        guard let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let arr = obj["data"] as? [[String: Any]], let first = arr.first,
+              let b64 = first["b64_json"] as? String else { return nil }
+        return Data(base64Encoded: b64)
+    }
+
+    private static func sendMultipart(_ req: URLRequest) async throws -> Data {
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode != 200 {
+            throw ImageGenError.http(http.statusCode, String(data: data, encoding: .utf8) ?? "")
+        }
+        if let d = parseB64Image(data) { return d }
+        guard let obj = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let arr = obj["data"] as? [[String: Any]], let first = arr.first,
+              let urlStr = first["url"] as? String, let u = URL(string: urlStr) else {
+            throw ImageGenError.empty
+        }
+        let (imgData, _) = try await URLSession.shared.data(from: u)
+        return imgData
+    }
+
+    /// DashScope img2img: misma ruta multimodal pero con una parte {image: dataURL} + {text: prompt}.
+    private static func dashscopeEdit(prompt: String, image: Data, model: String, base: String,
+                                      apiKey: String, size: String) async throws -> Data {
+        var m = model
+        let openAIDefaults = ["dall-e-3", "dall-e-2", "gpt-image-1"]
+        if m.isEmpty || openAIDefaults.contains(m.lowercased()) { m = "wan2.7-image" }
+        let dsSize = size.replacingOccurrences(of: "x", with: "*")
+        let root = hostRoot(base)
+        guard let url = URL(string: root + "/api/v1/services/aigc/multimodal-generation/generation") else {
+            throw ImageGenError.badURL(root)
+        }
+        let dataURL = "data:image/png;base64," + image.base64EncodedString()
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if !apiKey.isEmpty { req.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization") }
+        req.timeoutInterval = 90
+        let body: [String: Any] = [
+            "model": m,
+            "input": ["messages": [["role": "user", "content": [["image": dataURL], ["text": prompt]]]]],
+            "parameters": ["size": dsSize]
+        ]
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode != 200 {
+            throw ImageGenError.http(http.statusCode, String(data: data, encoding: .utf8) ?? "")
+        }
+        guard let obj = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { throw ImageGenError.empty }
+        if let code = obj["code"] as? String, !code.isEmpty {
+            throw ImageGenError.http(200, "\(code): \(obj["message"] as? String ?? "")")
+        }
+        if let output = obj["output"] as? [String: Any],
+           let choices = output["choices"] as? [[String: Any]],
+           let msg = choices.first?["message"] as? [String: Any],
+           let items = msg["content"] as? [[String: Any]] {
+            for item in items {
+                let ref = (item["image"] as? String) ?? (item["url"] as? String)
+                guard let ref, !ref.isEmpty else { continue }
+                if ref.hasPrefix("data:"), let comma = ref.firstIndex(of: ","),
+                   let d = Data(base64Encoded: String(ref[ref.index(after: comma)...])) { return d }
+                if let u = URL(string: ref) {
+                    let (imgData, _) = try await URLSession.shared.data(from: u)
+                    return imgData
+                }
+            }
+        }
+        throw ImageGenError.empty
+    }
 }
 
 /// Redimensiona/comprime una foto antes de mandarla como base64 (vision).

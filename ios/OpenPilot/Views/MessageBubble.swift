@@ -7,6 +7,8 @@ struct MessageRow: View {
     var isActive: Bool = false
     var onRegenerate: (() -> Void)? = nil
     var onEdit: (() -> Void)? = nil
+    var onVariation: (() -> Void)? = nil
+    var onEditImage: (() -> Void)? = nil
     /// Navegación de versiones < n/m > (0 = sin versiones).
     var versionCurrent: Int = 0
     var versionTotal: Int = 0
@@ -107,17 +109,41 @@ struct MessageRow: View {
             Image(uiImage: ui).resizable().scaledToFit()
                 .frame(maxWidth: 320)
                 .clipShape(RoundedRectangle(cornerRadius: 16))
-            Button {
-                UIImageWriteToSavedPhotosAlbum(ui, nil, nil, nil)
-                Haptic.success()
-                saved = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { saved = false }
-            } label: {
-                Label(saved ? T("Saved", "Guardada") : T("Save", "Guardar"), systemImage: saved ? "checkmark" : "square.and.arrow.down")
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(saved ? OP.success : OP.textSecondary)
+                .contextMenu {
+                    if let onVariation {
+                        Button { onVariation() } label: { Label(T("Create variation", "Crear variación"), systemImage: "wand.and.stars") }
+                    }
+                    if let onEditImage {
+                        Button { onEditImage() } label: { Label(T("Edit with prompt…", "Editar con prompt…"), systemImage: "slider.horizontal.3") }
+                    }
+                }
+            HStack(spacing: 14) {
+                Button {
+                    UIImageWriteToSavedPhotosAlbum(ui, nil, nil, nil)
+                    Haptic.success()
+                    saved = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { saved = false }
+                } label: {
+                    Label(saved ? T("Saved", "Guardada") : T("Save", "Guardar"), systemImage: saved ? "checkmark" : "square.and.arrow.down")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(saved ? OP.success : OP.textSecondary)
+                }
+                .buttonStyle(ScaleButtonStyle())
+                if let onVariation {
+                    Button { onVariation() } label: {
+                        Label(T("Variation", "Variación"), systemImage: "wand.and.stars")
+                            .font(.caption.weight(.medium)).foregroundStyle(OP.textSecondary)
+                    }
+                    .buttonStyle(ScaleButtonStyle())
+                }
+                if let onEditImage {
+                    Button { onEditImage() } label: {
+                        Label(T("Edit", "Editar"), systemImage: "slider.horizontal.3")
+                            .font(.caption.weight(.medium)).foregroundStyle(OP.textSecondary)
+                    }
+                    .buttonStyle(ScaleButtonStyle())
+                }
             }
-            .buttonStyle(ScaleButtonStyle())
         }
     }
 

@@ -13,7 +13,7 @@
 - **Visible reasoning** — collapsible "thinking" trace for models that emit it.
 - **Web search with inline citations** — grounded answers with tappable source pills.
 - **Generative UI cards** — native weather and currency-conversion cards rendered from public, key-free APIs (Open-Meteo, Frankfurter/BCE).
-- **Image generation** for providers that support it.
+- **Image generation, editing & variations** — generate an image, then create a variation or redraw it with a prompt (image-to-image), on providers that support it.
 - **Voice** — dictate messages with on-device speech recognition, read replies aloud with a **pickable device voice**, and a **live voice mode** for continuous hands-free conversation (listen → reply → listen) with **barge-in** (interrupt the assistant by speaking).
 - **Attachments** — photos from library or camera, plus **files** (PDF, documents, code) extracted into the model's context.
 - **Canvas** — a side editor for code or text you can revise by hand or ask the model to change, with navigable versions. A **Code / Preview** toggle renders HTML & JavaScript in an on-device WebView and draws **Mermaid** diagrams fully offline (bundled mermaid.js).
@@ -73,6 +73,7 @@ ios/            Native iOS app (SwiftUI + SwiftData)
 - [x] Canvas live preview (HTML/JS WebView) + offline Mermaid diagrams
 - [x] Side-by-side multi-model comparison
 - [x] iPad/Mac split view + keyboard shortcuts
+- [x] Image editing & variations (image-to-image)
 - [x] Voice picker + barge-in (interrupt the assistant by speaking)
 - [x] Live voice mode (hands-free)
 - [x] Automated XCTest suite
