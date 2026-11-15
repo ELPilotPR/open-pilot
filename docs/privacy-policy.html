@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Open Pilot — Privacy Policy</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+         max-width: 760px; margin: 0 auto; padding: 40px 20px; line-height: 1.6; }
+  h1 { font-size: 1.8rem; } h2 { font-size: 1.2rem; margin-top: 2rem; }
+  .muted { opacity: .7; font-size: .9rem; }
+  code { background: rgba(127,127,127,.15); padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<h1>Open Pilot — Privacy Policy</h1>
+<p class="muted">Last updated: November 14, 2026</p>
+
+<p>Open Pilot ("the app") is an open-source chat client for iOS. It is designed to be
+<strong>private by architecture</strong>: there is no Open Pilot backend, no account, and no
+server operated by us that receives your data. This policy explains what stays on your
+device and what is sent to third parties you choose to connect to.</p>
+
+<h2>1. Data stored on your device</h2>
+<p>All of the following are stored <strong>only on your iPhone</strong> and are never
+transmitted to us:</p>
+<ul>
+  <li>Conversations and messages (local database).</li>
+  <li>Projects, custom instructions, and automatic memory facts.</li>
+  <li>App settings and preferences.</li>
+  <li>Provider API keys, which are stored in the iOS <strong>Keychain</strong> (encrypted,
+      device-only).</li>
+</ul>
+<p>Deleting the app removes this data. We cannot access, recover, or read it.</p>
+
+<h2>2. No data collected by us</h2>
+<p>We do <strong>not</strong> collect, store, sell, or share any personal data. The app
+contains no analytics, no advertising, no tracking SDKs, and no telemetry. We do not
+operate any server that your device communicates with.</p>
+
+<h2>3. Third-party services you connect to</h2>
+<p>The app sends your prompts <strong>directly from your device</strong> to the model
+providers you configure. Those providers process your requests under their own privacy
+policies. We are not a party to that exchange and do not intercept it.</p>
+<ul>
+  <li><strong>Model providers</strong> you add in Settings (for example a server on your
+      local network, or cloud APIs such as OpenAI, Anthropic, or Alibaba DashScope). Your
+      messages, and any images or files you attach, are sent to the provider you selected
+      so it can generate a reply.</li>
+  <li><strong>Web search</strong> (optional): search queries are sent to DuckDuckGo to
+      retrieve results.</li>
+  <li><strong>Weather</strong> (optional): location or place names are sent to Open-Meteo.</li>
+  <li><strong>Currency</strong> (optional): currency pairs are sent to Frankfurter.</li>
+</ul>
+<p>You control which providers are configured and can remove them at any time. API keys
+go directly to the provider you entered; they are never sent to us.</p>
+
+<h2>4. Microphone, speech, and camera</h2>
+<p>Voice input uses Apple's on-device Speech framework to convert speech to text, and
+text-to-speech uses Apple's on-device synthesizer. Audio is processed on your device and
+is not sent to us. Camera and photo access are used only to attach images you choose to
+send to your configured provider. These permissions are optional and can be revoked in
+iOS Settings.</p>
+
+<h2>5. Children</h2>
+<p>The app is not directed to children under 13 and does not knowingly collect data from
+anyone, since it collects no data at all.</p>
+
+<h2>6. Changes</h2>
+<p>If this policy changes, the updated version will be posted at this URL with a new
+"last updated" date.</p>
+
+<h2>7. Contact</h2>
+<p>Questions about this policy can be opened as an issue in the public repository:
+<a href="https://github.com/ELPilotPR/open-pilot">github.com/ELPilotPR/open-pilot</a>.</p>
+
+<p class="muted">Open Pilot is open source under the MIT License.</p>
+</body>
+</html>
