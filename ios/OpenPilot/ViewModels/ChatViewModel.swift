@@ -99,6 +99,8 @@ final class ChatViewModel: ObservableObject {
             if !conversation.isTemporary {
                 let mem = MemoryStore.systemPrompt
                 if !mem.isEmpty { systemPrompt = mem + "\n\n" + systemPrompt }
+                let profile = ProfileStore.systemPrompt
+                if !profile.isEmpty { systemPrompt = profile + "\n\n" + systemPrompt }
             }
             if let pid = conversation.projectID {
                 let desc = FetchDescriptor<Project>(predicate: #Predicate { $0.id == pid })
@@ -180,6 +182,17 @@ final class ChatViewModel: ObservableObject {
                 }
                 if MemoryStore.enabled && !assistant.text.isEmpty && !conversation.isTemporary {
                     self.extractMemories(userText: userText, assistantText: assistant.text, provider: provider, conversation: conversation)
+                }
+                // Modo sueño: cuenta el turno y consolida el perfil al llegar al umbral.
+                if !conversation.isTemporary {
+                    ProfileStore.newMessages += 1
+                    if DreamSupport.shouldDream(enabled: ProfileStore.dreamEnabled, newMessages: ProfileStore.newMessages, threshold: ProfileStore.threshold) {
+                        let dreamProvider = provider
+                        let dreamModel = conversation.model
+                        Task { @MainActor in
+                            _ = await DreamEngine.dream(provider: dreamProvider, model: dreamModel, context: context)
+                        }
+                    }
                 }
             } catch {
                 if !Task.isCancelled {

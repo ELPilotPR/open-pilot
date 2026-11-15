@@ -203,6 +203,14 @@ struct SettingsView: View {
                         Text(memoryStatus).font(.caption).foregroundStyle(OP.textSecondary)
                     }
                 }
+                NavigationLink {
+                    ProfileView()
+                } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(T("Profile & Dream", "Perfil y sueño")).foregroundStyle(OP.textPrimary)
+                        Text(T("Learns about you from your chats", "Aprende de ti desde tus chats")).font(.caption).foregroundStyle(OP.textSecondary)
+                    }
+                }
             } header: {
                 Text(T("Memory", "Memoria"))
             } footer: {
