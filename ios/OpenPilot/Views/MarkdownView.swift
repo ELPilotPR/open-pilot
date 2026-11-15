@@ -287,6 +287,16 @@ struct CodeBlockView: View {
                     .foregroundStyle(OP.textTertiary)
                 Spacer()
                 Button {
+                    NotificationCenter.default.post(name: .openCanvas, object: nil, userInfo: ["lang": lang, "code": code])
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "square.and.pencil")
+                        Text("Canvas")
+                    }
+                    .font(.caption2)
+                    .foregroundStyle(OP.textSecondary)
+                }
+                Button {
                     UIPasteboard.general.string = code
                     Haptic.success()
                     copied = true

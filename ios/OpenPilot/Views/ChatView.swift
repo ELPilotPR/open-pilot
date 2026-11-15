@@ -23,6 +23,7 @@ struct ChatView: View {
     @State private var showCamera = false
     @State private var imageSupport: [String: Bool] = [:]
     @State private var demoCI = false
+    @State private var canvasDoc: CanvasDocument?
     @State private var probingImage = false
     @ObservedObject private var voice = VoiceManager.shared
     @State private var dictationPrefix = ""
@@ -150,6 +151,14 @@ struct ChatView: View {
         .sheet(item: $editingMessage) { m in
             editSheet(m)
         }
+        .sheet(item: $canvasDoc) { doc in
+            CanvasView(doc: doc, provider: activeProvider, model: activeModel)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .openCanvas)) { note in
+            let lang = note.userInfo?["lang"] as? String ?? ""
+            let code = note.userInfo?["code"] as? String ?? ""
+            openCanvas(lang: lang, code: code)
+        }
         .sheet(isPresented: $demoCI) {
             NavigationStack { CustomInstructionsView() }
         }
@@ -168,6 +177,7 @@ struct ChatView: View {
         if args.contains("-demoError") { demoError(); return }
         if args.contains("-demoVersions") { demoVersions(startVersion: args.contains("-v1") ? 1 : 2); return }
         if args.contains("-demoFile") { demoFile(); return }
+        if args.contains("-demoCanvas") { demoCanvas(); return }
         if args.contains("-demoCI") {
             CustomInstructions.aboutYou = "Soy Javier, desarrollador en Wisconsin. Trabajo en iOS y crypto."
             CustomInstructions.responsePrefs = "Responde siempre en español, directo y con tablas cuando haya datos."
@@ -231,6 +241,20 @@ struct ChatView: View {
             for m in [u, a] { m.conversation = conv; conv.messages.append(m); context.insert(m) }
             conv.activeLeafID = a.id
             try? context.save()
+        }
+    }
+
+    /// Demo OFFLINE de Canvas: abre un documento de código con 2 versiones para
+    /// verificar el editor y la navegación < n/m > sin red.
+    private func demoCanvas() {
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            let v1 = "func saluda(nombre: String) {\n    print(\"Hola, \\(nombre)\")\n}\n\nsaluda(nombre: \"Mundo\")"
+            let v2 = "func saluda(nombre: String, emoji: String = \"👋\") {\n    print(\"\\(emoji) Hola, \\(nombre)\")\n}\n\nsaluda(nombre: \"Javier\")"
+            let doc = CanvasDocument(title: "Swift", content: v2, language: "swift")
+            doc.versions = [v1, v2]
+            doc.versionIndex = 1
+            canvasDoc = doc
         }
     }
 
@@ -604,6 +628,7 @@ struct ChatView: View {
                 }
                 Button { showCamera = true } label: { Label(T("Camera", "Cámara"), systemImage: "camera") }
                 Button { showFilePicker = true } label: { Label(T("Attach file", "Adjuntar archivo"), systemImage: "doc") }
+                Button { openCanvasFromChat() } label: { Label("Canvas", systemImage: "square.and.pencil") }
             } label: {
                 Image(systemName: "plus").font(.system(size: 18, weight: .medium))
                     .foregroundStyle(OP.textPrimary)
@@ -708,6 +733,34 @@ struct ChatView: View {
     private func regenerate() {
         guard let p = activeProvider, let c = current else { return }
         vm.regenerate(conversation: c, provider: p, context: context)
+    }
+
+    /// Abre Canvas con un contenido dado (desde un bloque de código o el botón).
+    private func openCanvas(lang: String, code: String) {
+        let title = lang.isEmpty ? T("Document", "Documento") : lang.uppercased()
+        canvasDoc = CanvasDocument(title: title, content: code, language: lang)
+        Haptic.light()
+    }
+
+    /// Abre Canvas con el último bloque de código del asistente (o vacío).
+    private func openCanvasFromChat() {
+        for m in messages.reversed() where m.role == "assistant" {
+            if let (lang, code) = Self.firstCodeBlock(in: m.text) {
+                openCanvas(lang: lang, code: code)
+                return
+            }
+        }
+        openCanvas(lang: "", code: "")
+    }
+
+    /// Extrae el primer bloque ```lang … ``` de un texto.
+    static func firstCodeBlock(in text: String) -> (String, String)? {
+        let ns = text as NSString
+        guard let re = try? NSRegularExpression(pattern: "```([^\\n`]*)\\n?([\\s\\S]*?)(?:```|$)") else { return nil }
+        guard let m = re.firstMatch(in: text, range: NSRange(location: 0, length: ns.length)) else { return nil }
+        let lang = ns.substring(with: m.range(at: 1)).trimmingCharacters(in: .whitespaces)
+        let code = ns.substring(with: m.range(at: 2)).trimmingCharacters(in: .newlines)
+        return (lang, code)
     }
 
     /// Navega a otra versión (rama hermana) del mensaje, sin perder las demás.
