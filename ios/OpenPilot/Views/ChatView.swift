@@ -10,6 +10,7 @@ struct ChatView: View {
     let onSettings: () -> Void
 
     @Environment(\.modelContext) private var context
+    @Environment(\.scenePhase) private var scenePhase
     @Query private var providers: [ProviderConfig]
     @StateObject private var vm = ChatViewModel()
     @State private var input = ""
@@ -147,7 +148,8 @@ struct ChatView: View {
             composer
         }
         .background(OP.canvas.ignoresSafeArea())
-        .onAppear { runDemoIfNeeded() }
+        .onAppear { runDemoIfNeeded(); consumeVoiceIntent() }
+        .onChange(of: scenePhase) { _, p in if p == .active { consumeVoiceIntent() } }
         .sheet(isPresented: $showPromptLibrary) { NavigationStack { PromptLibraryView() } }
         .animation(.easeInOut(duration: 0.2), value: vm.statusText == nil)
         .onChange(of: imageMode) { _, on in if on { probeIfNeeded() } }
@@ -230,6 +232,14 @@ struct ChatView: View {
 
     /// Hook de verificación visual (SOLO con argumento -demoWeather/-demoCurrency al
     /// lanzar). No afecta el uso normal: envía una consulta demo para ver la tarjeta.
+    /// Consume la intent de voz (Siri/Shortcuts): arranca el modo voz en vivo.
+    private func consumeVoiceIntent() {
+        let d = UserDefaults.standard
+        guard d.bool(forKey: IntentSupport.voiceFlag) else { return }
+        d.removeObject(forKey: IntentSupport.voiceFlag)
+        if !live.isActive { live.start() }
+    }
+
     private func runDemoIfNeeded() {
         let args = CommandLine.arguments
         if args.contains("-demoCitations") { demoCitations(); return }

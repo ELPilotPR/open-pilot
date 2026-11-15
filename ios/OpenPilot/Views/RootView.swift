@@ -45,8 +45,8 @@ struct RootView: View {
         .sheet(isPresented: $demoMemory) {
             NavigationStack { MemoryView() }
         }
-        .task { purgeTemporary(); seedIfNeeded(); demoSidebarIfNeeded(); demoModelsIfNeeded(); demoProjectsIfNeeded(); demoMemoryIfNeeded(); demoShareIfNeeded(); consumePendingShare() }
-        .onChange(of: scenePhase) { _, phase in if phase == .active { consumePendingShare() } }
+        .task { purgeTemporary(); seedIfNeeded(); demoSidebarIfNeeded(); demoModelsIfNeeded(); demoProjectsIfNeeded(); demoMemoryIfNeeded(); demoShareIfNeeded(); consumePendingShare(); consumeIntentFlags() }
+        .onChange(of: scenePhase) { _, phase in if phase == .active { consumePendingShare(); consumeIntentFlags() } }
         .onChange(of: current?.id) { oldID, newID in
             guard let oldID, oldID != newID else { return }
             let desc = FetchDescriptor<Conversation>(predicate: #Predicate { $0.id == oldID })
@@ -108,6 +108,15 @@ struct RootView: View {
     }
 
     /// Demo offline: siembra un share en el App Group y lo consume (sin extensión real).
+    /// Consume las intents de Siri/Shortcuts que abren la app (chat nuevo).
+    private func consumeIntentFlags() {
+        let d = UserDefaults.standard
+        if d.bool(forKey: IntentSupport.newChatFlag) {
+            d.removeObject(forKey: IntentSupport.newChatFlag)
+            current = nil
+        }
+    }
+
     private func demoShareIfNeeded() {
         guard CommandLine.arguments.contains("-demoShare") else { return }
         let item = SharedItem(kind: .url, text: "Artículo sobre energía solar",
