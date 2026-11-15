@@ -35,7 +35,7 @@ struct ChatView: View {
         return providers.first(where: { $0.id == selectedProviderID }) ?? providers.first
     }
     private var activeModel: String { current?.model ?? selectedModel }
-    private var messages: [Message] { current?.sortedMessages ?? [] }
+    private var messages: [Message] { current?.activeMessages ?? [] }
     private var imagesAvailable: Bool {
         guard let p = activeProvider else { return false }
         switch p.imageCapability {
@@ -134,6 +134,7 @@ struct ChatView: View {
         if args.contains("-demoEdit") { demoEdit(); return }
         if args.contains("-demoKeychain") { demoKeychain(); return }
         if args.contains("-demoError") { demoError(); return }
+        if args.contains("-demoVersions") { demoVersions(startVersion: args.contains("-v1") ? 1 : 2); return }
         let prompt: String?
         if args.contains("-demoWeather") { prompt = "¿Cómo está el tiempo en Racine WI?" }
         else if args.contains("-demoCurrency") { prompt = "cuánto es 100 dólares en euros" }
@@ -143,6 +144,33 @@ struct ChatView: View {
             try? await Task.sleep(nanoseconds: 700_000_000)
             browse = false; imageMode = false; input = prompt
             send()
+        }
+    }
+
+    /// Demo OFFLINE de versiones: un mensaje de usuario con 2 versiones (ramas
+    /// hermanas) y sus respuestas; la activa es la 2. Verifica el selector < n/m >.
+    private func demoVersions(startVersion: Int = 2) {
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            let conv = Conversation(title: "Demo versiones", providerID: activeProvider?.id ?? "casa", model: activeModel)
+            context.insert(conv); current = conv
+            let now = Date()
+            let u1 = Message(role: "user", text: "¿Cuál es la capital de Francia?")
+            u1.createdAt = now.addingTimeInterval(-4); u1.version = 1; u1.parentID = nil
+            let a1 = Message(role: "assistant", text: "La capital de Francia es **París**, su ciudad más poblada y centro político y cultural.")
+            a1.createdAt = now.addingTimeInterval(-3); a1.parentID = u1.id; a1.version = 1
+            a1.completionTokens = 24; a1.tokensPerSecond = 31
+            u1.preferredChildID = a1.id
+            let u2 = Message(role: "user", text: "¿Cuál es la capital de Francia? (sé breve)")
+            u2.createdAt = now.addingTimeInterval(-2); u2.version = 2; u2.parentID = nil
+            let a2 = Message(role: "assistant", text: "París.")
+            a2.createdAt = now.addingTimeInterval(-1); a2.parentID = u2.id; a2.version = 1
+            a2.completionTokens = 2; a2.tokensPerSecond = 40
+            u2.preferredChildID = a2.id
+            for m in [u1, a1, u2, a2] { m.conversation = conv; conv.messages.append(m); context.insert(m) }
+            conv.activeLeafID = a2.id
+            if startVersion == 1 { conv.switchToVersion(u1) }   // ejercita el cambio de rama
+            try? context.save()
         }
     }
 
@@ -470,9 +498,13 @@ struct ChatView: View {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 24) {
                         ForEach(Array(messages.enumerated()), id: \.element.id) { idx, m in
+                            let sibs = current?.siblings(of: m) ?? [m]
                             MessageRow(message: m, isActive: vm.isStreaming && idx == messages.count - 1,
                                        onRegenerate: (!vm.isStreaming && m.role == "assistant" && idx == messages.count - 1) ? { regenerate() } : nil,
-                                       onEdit: (!vm.isStreaming && m.role == "user") ? { startEdit(m) } : nil)
+                                       onEdit: (!vm.isStreaming && m.role == "user") ? { startEdit(m) } : nil,
+                                       versionCurrent: sibs.count > 1 ? m.version : 0,
+                                       versionTotal: sibs.count > 1 ? sibs.count : 0,
+                                       onSwitchVersion: { target in switchVersion(m, to: target) })
                                 .id(m.id)
                         }
                         Color.clear.frame(height: 1).id("bottom")
@@ -615,6 +647,16 @@ struct ChatView: View {
     private func regenerate() {
         guard let p = activeProvider, let c = current else { return }
         vm.regenerate(conversation: c, provider: p, context: context)
+    }
+
+    /// Navega a otra versión (rama hermana) del mensaje, sin perder las demás.
+    private func switchVersion(_ m: Message, to targetVersion: Int) {
+        guard let c = current else { return }
+        let sibs = c.siblings(of: m)
+        guard let target = sibs.first(where: { $0.version == targetVersion }) else { return }
+        c.switchToVersion(target)
+        try? context.save()
+        Haptic.selection()
     }
 
     // MARK: - Editar mensaje del usuario

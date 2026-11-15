@@ -4,6 +4,11 @@ import SwiftData
 /// Orquesta el envio de mensajes (texto + vision) y la generacion de imagenes,
 /// persistiendo todo en el dispositivo (SwiftData). Sin backend: el provider habla
 /// directo con el modelo. browse=true busca en la web; image=foto adjunta (vision).
+///
+/// Los mensajes se organizan en un ÁRBOL de versiones: editar un
+/// mensaje de usuario o regenerar una respuesta crea una rama hermana que conserva
+/// la original; la ruta raíz→hoja activa (`Conversation.activeMessages`) es lo que se
+/// muestra y se envía como historial. Navegar < n/m > cambia de rama sin perder nada.
 @MainActor
 final class ChatViewModel: ObservableObject {
     @Published var isStreaming = false
@@ -18,25 +23,44 @@ final class ChatViewModel: ObservableObject {
         guard (!trimmed.isEmpty || hasImage), !isStreaming else { return }
         let isFirstTurn = conversation.messages.isEmpty
         errorText = nil
+        conversation.ensureTree()
 
         let userText = trimmed.isEmpty && hasImage ? "Describe esta imagen." : trimmed
         let userMsg = Message(role: "user", text: userText)
         if hasImage { userMsg.imageData = image! }
+        userMsg.parentID = conversation.activeLeafID ?? conversation.sortedMessages.last?.id
+        if let pid = userMsg.parentID, let parent = conversation.message(pid) {
+            userMsg.version = conversation.siblings(of: userMsg).count + 1
+            parent.preferredChildID = userMsg.id
+        }
         userMsg.conversation = conversation
         conversation.messages.append(userMsg)
         context.insert(userMsg)
 
         let assistant = Message(role: "assistant", text: "")
+        assistant.parentID = userMsg.id
+        userMsg.preferredChildID = assistant.id
         assistant.conversation = conversation
         conversation.messages.append(assistant)
         context.insert(assistant)
+        conversation.activeLeafID = assistant.id
 
         if conversation.title.isEmpty {
             conversation.title = String(userText.prefix(40))
         }
         try? context.save()
 
-        let history = conversation.sortedMessages
+        runAssistant(assistant, userText: userText, hasImage: hasImage,
+                     conversation: conversation, provider: provider, context: context,
+                     browse: browse, isFirstTurn: isFirstTurn)
+    }
+
+    /// Ejecuta el streaming de una respuesta assistant ya insertada en el árbol.
+    /// Compartido por send / regenerate / editAndResend (clima, divisas, browse, visión).
+    private func runAssistant(_ assistant: Message, userText: String, hasImage: Bool,
+                              conversation: Conversation, provider: ProviderConfig,
+                              context: ModelContext, browse: Bool, isFirstTurn: Bool) {
+        let history = conversation.activeMessages
             .filter { $0.role != "assistant" || !$0.text.isEmpty }
             .map { ChatTurn(role: $0.role, content: $0.text,
                             images: ($0.role == "user" && !$0.imageData.isEmpty) ? [$0.imageData] : []) }
@@ -127,16 +151,25 @@ final class ChatViewModel: ObservableObject {
         let trimmed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, !isStreaming else { return }
         errorText = nil
+        conversation.ensureTree()
 
         let userMsg = Message(role: "user", text: trimmed)
+        userMsg.parentID = conversation.activeLeafID ?? conversation.sortedMessages.last?.id
+        if let pid = userMsg.parentID, let parent = conversation.message(pid) {
+            userMsg.version = conversation.siblings(of: userMsg).count + 1
+            parent.preferredChildID = userMsg.id
+        }
         userMsg.conversation = conversation
         conversation.messages.append(userMsg)
         context.insert(userMsg)
 
         let assistant = Message(role: "assistant", text: "")
+        assistant.parentID = userMsg.id
+        userMsg.preferredChildID = assistant.id
         assistant.conversation = conversation
         conversation.messages.append(assistant)
         context.insert(assistant)
+        conversation.activeLeafID = assistant.id
 
         if conversation.title.isEmpty {
             conversation.title = String(trimmed.prefix(40))
@@ -189,37 +222,69 @@ final class ChatViewModel: ObservableObject {
         }
     }
 
-    /// Regenera la última respuesta: borra el último turno user+assistant y lo
-    /// re-envía (reutiliza send: clima/browse/imagen). Conserva si usó browse.
+    /// Regenera la última respuesta como una NUEVA versión (rama hermana): la
+    /// anterior se conserva y se navega con < n/m >. Conserva si usó browse.
     func regenerate(conversation: Conversation, provider: ProviderConfig, context: ModelContext) {
         guard !isStreaming else { return }
-        let msgs = conversation.sortedMessages
-        guard let ui = msgs.lastIndex(where: { $0.role == "user" }) else { return }
-        let userMsg = msgs[ui]
+        conversation.ensureTree()
+        let msgs = conversation.activeMessages
+        guard let lastAssistant = msgs.last(where: { $0.role == "assistant" }),
+              let parentID = lastAssistant.parentID,
+              let userMsg = conversation.message(parentID) else { return }
         let text = userMsg.text
         let img = userMsg.imageData.isEmpty ? nil : userMsg.imageData
-        let assistants = msgs[(ui + 1)...].filter { $0.role == "assistant" }
-        let hadBrowse = assistants.contains { !$0.sources.isEmpty }
-        for a in assistants { context.delete(a) }
-        context.delete(userMsg)
+        let hadBrowse = !lastAssistant.sources.isEmpty
+
+        let assistant = Message(role: "assistant", text: "")
+        assistant.parentID = parentID
+        assistant.version = conversation.siblings(of: assistant).count + 1
+        assistant.conversation = conversation
+        conversation.messages.append(assistant)
+        context.insert(assistant)
+        userMsg.preferredChildID = assistant.id
+        conversation.activeLeafID = assistant.id
         try? context.save()
-        send(text, conversation: conversation, provider: provider, context: context, browse: hadBrowse, image: img)
+
+        runAssistant(assistant, userText: text, hasImage: img != nil,
+                     conversation: conversation, provider: provider, context: context,
+                     browse: hadBrowse, isFirstTurn: false)
     }
 
-    /// Edita un mensaje del usuario ya enviado: borra ese turno y todo lo
-    /// posterior, y re-envía el texto nuevo (reutiliza send). Conserva browse/imagen.
+    /// Edita un mensaje del usuario creando una NUEVA versión (rama hermana): el
+    /// original y su respuesta se conservan; se navega con < n/m >. Conserva browse/imagen.
     func editAndResend(_ message: Message, newText: String, conversation: Conversation,
                        provider: ProviderConfig, context: ModelContext) {
         guard !isStreaming else { return }
         let trimmed = newText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        let msgs = conversation.sortedMessages
-        guard let idx = msgs.firstIndex(where: { $0.id == message.id }) else { return }
+        conversation.ensureTree()
+        let active = conversation.activeMessages
         let img = message.imageData.isEmpty ? nil : message.imageData
-        let hadBrowse = msgs[idx...].contains { $0.role == "assistant" && !$0.sources.isEmpty }
-        for m in msgs[idx...] { context.delete(m) }
+        let hadBrowse = active.contains { $0.role == "assistant" && !$0.sources.isEmpty }
+
+        let newUser = Message(role: "user", text: trimmed)
+        newUser.parentID = message.parentID
+        newUser.imageData = message.imageData
+        newUser.version = conversation.siblings(of: newUser).count + 1
+        newUser.conversation = conversation
+        conversation.messages.append(newUser)
+        context.insert(newUser)
+        if let pid = message.parentID, let parent = conversation.message(pid) {
+            parent.preferredChildID = newUser.id
+        }
+
+        let assistant = Message(role: "assistant", text: "")
+        assistant.parentID = newUser.id
+        newUser.preferredChildID = assistant.id
+        assistant.conversation = conversation
+        conversation.messages.append(assistant)
+        context.insert(assistant)
+        conversation.activeLeafID = assistant.id
         try? context.save()
-        send(trimmed, conversation: conversation, provider: provider, context: context, browse: hadBrowse, image: img)
+
+        runAssistant(assistant, userText: trimmed, hasImage: img != nil,
+                     conversation: conversation, provider: provider, context: context,
+                     browse: hadBrowse, isFirstTurn: false)
     }
 
     func stop() {

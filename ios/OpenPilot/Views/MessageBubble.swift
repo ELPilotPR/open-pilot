@@ -7,6 +7,10 @@ struct MessageRow: View {
     var isActive: Bool = false
     var onRegenerate: (() -> Void)? = nil
     var onEdit: (() -> Void)? = nil
+    /// Navegación de versiones < n/m > (0 = sin versiones).
+    var versionCurrent: Int = 0
+    var versionTotal: Int = 0
+    var onSwitchVersion: ((Int) -> Void)? = nil
     @State private var copied = false
     @State private var saved = false
     @State private var appeared = false
@@ -27,30 +31,34 @@ struct MessageRow: View {
         if message.role == "user" {
             HStack {
                 Spacer(minLength: 48)
-                VStack(alignment: .trailing, spacing: 6) {
-                    if !message.imageData.isEmpty, let ui = UIImage(data: message.imageData) {
-                        Image(uiImage: ui).resizable().scaledToFit()
-                            .frame(maxWidth: 240, maxHeight: 240)
-                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                VStack(alignment: .trailing, spacing: 4) {
+                    VStack(alignment: .trailing, spacing: 6) {
+                        if !message.imageData.isEmpty, let ui = UIImage(data: message.imageData) {
+                            Image(uiImage: ui).resizable().scaledToFit()
+                                .frame(maxWidth: 240, maxHeight: 240)
+                                .clipShape(RoundedRectangle(cornerRadius: 16))
+                        }
+                        if !message.text.isEmpty {
+                            Text(message.text)
+                                .font(.body).foregroundStyle(OP.textPrimary)
+                                .padding(.horizontal, 14).padding(.vertical, 10)
+                                .background(OP.userBubble)
+                                .clipShape(RoundedRectangle(cornerRadius: 20))
+                                .textSelection(.enabled)
+                        }
                     }
-                    if !message.text.isEmpty {
-                        Text(message.text)
-                            .font(.body).foregroundStyle(OP.textPrimary)
-                            .padding(.horizontal, 14).padding(.vertical, 10)
-                            .background(OP.userBubble)
-                            .clipShape(RoundedRectangle(cornerRadius: 20))
-                            .textSelection(.enabled)
+                    .contentShape(RoundedRectangle(cornerRadius: 20))
+                    .onTapGesture { onEdit?() }
+                    .contextMenu {
+                        if let onEdit {
+                            Button { onEdit() } label: { Label(T("Edit", "Editar"), systemImage: "pencil") }
+                        }
+                        Button { copyMessage() } label: { Label(T("Copy", "Copiar"), systemImage: "doc.on.doc") }
                     }
+                    .accessibilityLabel(T("Your message", "Tu mensaje"))
+                    .accessibilityHint(T("Tap to edit and resend", "Toca para editar y reenviar"))
+                    versionNav
                 }
-                .contentShape(RoundedRectangle(cornerRadius: 20))
-                .onTapGesture { onEdit?() }
-                .contextMenu {
-                    if let onEdit {
-                        Button { onEdit() } label: { Label(T("Edit", "Editar"), systemImage: "pencil") }
-                    }
-                }
-                .accessibilityLabel(T("Your message", "Tu mensaje"))
-                .accessibilityHint(T("Tap to edit and resend", "Toca para editar y reenviar"))
             }
         } else {
             HStack(alignment: .top, spacing: 12) {
@@ -72,6 +80,7 @@ struct MessageRow: View {
                     }
                     if !message.sources.isEmpty { sourcesView }
                     HStack(spacing: 12) {
+                        versionNav
                         if message.completionTokens > 0 { metricsView }
                         Spacer(minLength: 0)
                         if let onRegenerate { regenerateButton(onRegenerate) }
@@ -106,6 +115,31 @@ struct MessageRow: View {
     /// (streaming activo y aún sin respuesta) y se colapsa al empezar el texto.
     private var isThinking: Bool { isActive && message.text.isEmpty }
 
+    /// Selector de versiones < n/m > (solo si hay más de una rama hermana).
+    @ViewBuilder private var versionNav: some View {
+        if versionTotal > 1 {
+            HStack(spacing: 2) {
+                Button { onSwitchVersion?(versionCurrent - 1) } label: {
+                    Image(systemName: "chevron.left").font(.system(size: 11, weight: .semibold))
+                        .frame(width: 24, height: 24)
+                }
+                .disabled(versionCurrent <= 1)
+                Text("\(versionCurrent)/\(versionTotal)")
+                    .font(.caption2.weight(.medium)).monospacedDigit()
+                    .foregroundStyle(OP.textSecondary)
+                Button { onSwitchVersion?(versionCurrent + 1) } label: {
+                    Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold))
+                        .frame(width: 24, height: 24)
+                }
+                .disabled(versionCurrent >= versionTotal)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(OP.textSecondary)
+            .accessibilityLabel(T("Message version \(versionCurrent) of \(versionTotal)",
+                                  "Versión \(versionCurrent) de \(versionTotal) del mensaje"))
+        }
+    }
+
     private var reasoningView: some View {
         DisclosureGroup(isExpanded: $reasoningExpanded) {
             Text(message.reasoning)
@@ -134,6 +168,13 @@ struct MessageRow: View {
         }
         .font(.caption2)
         .foregroundStyle(OP.textTertiary)
+    }
+
+    private func copyMessage() {
+        UIPasteboard.general.string = message.text
+        Haptic.success()
+        withAnimation(.spring(duration: 0.3)) { copied = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { withAnimation { copied = false } }
     }
 
     private var copyButton: some View {

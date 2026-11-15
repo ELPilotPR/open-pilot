@@ -18,6 +18,14 @@ final class Message {
     var createdAt: Date
     var conversation: Conversation?
 
+    // Árbol de versiones: cada mensaje apunta a su predecesor
+    // en la rama. Editar un user / regenerar un assistant crea hermanos con el
+    // mismo parentID; `version` los ordena y `preferredChildID` recuerda la rama
+    // elegida al navegar < n/m >.
+    var parentID: UUID?
+    var version: Int = 1
+    var preferredChildID: UUID?
+
     init(role: String, text: String = "", reasoning: String = "") {
         self.id = UUID()
         self.role = role
