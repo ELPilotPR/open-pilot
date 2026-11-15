@@ -85,7 +85,7 @@ struct ProviderEditorView: View {
                         Button {
                             provider.baseURL = srv.baseURL
                             provider.kind = "openai"
-                            for m in srv.models where !provider.models.contains(m) { provider.models.append(m) }
+                            provider.models = provider.models + srv.models.filter { !provider.models.contains($0) }
                             try? context.save()
                         } label: {
                             VStack(alignment: .leading, spacing: 2) {
@@ -117,14 +117,19 @@ struct ProviderEditorView: View {
                         }
                     }
                 }
-                .onDelete { provider.models.remove(atOffsets: $0) }
+                .onDelete { offsets in
+                    var copy = provider.models
+                    copy.remove(atOffsets: offsets)
+                    provider.models = copy
+                    try? context.save()
+                }
 
                 if !presets.isEmpty {
                     Menu {
                         ForEach(presets) { p in
                             Button {
                                 if !provider.models.contains(p.id) {
-                                    provider.models.append(p.id); try? context.save()
+                                    provider.models = provider.models + [p.id]; try? context.save()
                                 }
                             } label: {
                                 Label(p.name + (p.badges.isEmpty ? "" : " · " + p.badges.joined(separator: ", ")),
@@ -192,7 +197,7 @@ struct ProviderEditorView: View {
     private func addModel() {
         let m = newModel.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !m.isEmpty, !provider.models.contains(m) else { return }
-        provider.models.append(m)
+        provider.models = provider.models + [m]   // reasignar: SwiftData observa el SET, no el append in-place
         newModel = ""
         try? context.save()
     }
@@ -226,7 +231,8 @@ struct ProviderEditorView: View {
         Task {
             do {
                 let ms = try await p.models(baseURL: base, apiKey: key)
-                for m in ms where !provider.models.contains(m) { provider.models.append(m) }
+                let fresh = ms.filter { !provider.models.contains($0) }
+                if !fresh.isEmpty { provider.models = provider.models + fresh }
                 testResult = T("OK \(ms.count) model(s): ", "OK \(ms.count) modelo(s): ") + ms.joined(separator: ", ")
                 try? context.save()
             } catch {
