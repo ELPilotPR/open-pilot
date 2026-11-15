@@ -14,6 +14,7 @@ struct SettingsView: View {
     @AppStorage("customResponsePrefs") private var ciPrefs = ""
     @AppStorage("context.autoCompact") private var autoCompact = true
     @AppStorage("context.budget") private var contextBudget = 6000
+    @AppStorage("hapticsEnabled") private var hapticsEnabled = true
     @State private var showVoicePicker = false
 
     var body: some View {
@@ -45,6 +46,14 @@ struct SettingsView: View {
                 Text(T("Appearance", "Apariencia"))
             } footer: {
                 Text(T("Follows your device setting by default.", "Sigue la configuración de tu dispositivo por defecto."))
+            }
+
+            Section {
+                Toggle(T("Haptic feedback", "Respuesta háptica"), isOn: $hapticsEnabled)
+            } header: {
+                Text(T("Feedback", "Feedback"))
+            } footer: {
+                Text(T("Subtle vibrations when you send, copy, or react. Turn off if you prefer a quieter feel.", "Vibraciones sutiles al enviar, copiar o reaccionar. Desactívalo si prefieres un tacto más silencioso."))
             }
 
             Section {

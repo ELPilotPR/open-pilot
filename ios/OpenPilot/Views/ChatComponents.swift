@@ -2,12 +2,14 @@ import SwiftUI
 
 /// Micro-interacciones y componentes de pulido del chat.
 enum Haptic {
-    static func light() { UIImpactFeedbackGenerator(style: .light).impactOccurred() }
-    static func medium() { UIImpactFeedbackGenerator(style: .medium).impactOccurred() }
-    static func soft() { UIImpactFeedbackGenerator(style: .soft).impactOccurred() }
-    static func success() { UINotificationFeedbackGenerator().notificationOccurred(.success) }
-    static func warning() { UINotificationFeedbackGenerator().notificationOccurred(.warning) }
-    static func selection() { UISelectionFeedbackGenerator().selectionChanged() }
+    /// Respeta el ajuste del usuario (Ajustes → Feedback). Por defecto activado.
+    static var enabled: Bool { HapticsPreference.isEnabled() }
+    static func light() { guard enabled else { return }; UIImpactFeedbackGenerator(style: .light).impactOccurred() }
+    static func medium() { guard enabled else { return }; UIImpactFeedbackGenerator(style: .medium).impactOccurred() }
+    static func soft() { guard enabled else { return }; UIImpactFeedbackGenerator(style: .soft).impactOccurred() }
+    static func success() { guard enabled else { return }; UINotificationFeedbackGenerator().notificationOccurred(.success) }
+    static func warning() { guard enabled else { return }; UINotificationFeedbackGenerator().notificationOccurred(.warning) }
+    static func selection() { guard enabled else { return }; UISelectionFeedbackGenerator().selectionChanged() }
 }
 
 /// Boton que se encoge levemente al presionar (feedback tactil visual).
@@ -17,6 +19,7 @@ struct ScaleButtonStyle: ButtonStyle {
             .scaleEffect(configuration.isPressed ? 0.9 : 1)
             .opacity(configuration.isPressed ? 0.8 : 1)
             .animation(.spring(duration: 0.2), value: configuration.isPressed)
+            .hoverEffect(.highlight)
     }
 }
 
@@ -34,7 +37,7 @@ struct TypingIndicator: View {
         }
         .onAppear { anim = true }
         .frame(height: 18)
-        .accessibilityLabel("Escribiendo")
+        .accessibilityLabel(T("Typing", "Escribiendo"))
     }
 }
 
@@ -52,5 +55,6 @@ struct ScrollToBottomButton: View {
                 .shadow(color: .black.opacity(0.25), radius: 6, x: 0, y: 2)
         }
         .buttonStyle(ScaleButtonStyle())
+        .accessibilityLabel(T("Scroll to latest", "Ir al final"))
     }
 }

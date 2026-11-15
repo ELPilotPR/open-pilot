@@ -1205,6 +1205,7 @@ struct ChatView: View {
                         .clipShape(Circle())
                         .animation(.easeInOut(duration: 0.2), value: browse)
                         .accessibilityLabel(T("Search the web", "Buscar en la web"))
+                        .accessibilityValue(browse ? T("On", "Activado") : T("Off", "Desactivado"))
                 }
                 .buttonStyle(ScaleButtonStyle())
             }
@@ -1216,6 +1217,7 @@ struct ChatView: View {
                     .clipShape(Circle())
                     .animation(.easeInOut(duration: 0.2), value: imageMode)
                     .accessibilityLabel(T("Generate image", "Generar imagen"))
+                    .accessibilityValue(imageMode ? T("On", "Activado") : T("Off", "Desactivado"))
             }
             .buttonStyle(ScaleButtonStyle())
             if !imageMode {
