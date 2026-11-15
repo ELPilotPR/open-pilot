@@ -52,10 +52,10 @@ struct RootView: View {
         .sheet(isPresented: $demoUsage) {
             NavigationStack { UsageDashboardView() }
         }
-        .task { purgeTemporary(); seedIfNeeded(); demoSidebarIfNeeded(); demoModelsIfNeeded(); demoProjectsIfNeeded(); demoMemoryIfNeeded(); demoShareIfNeeded(); demoOnDeviceIfNeeded(); demoUsageIfNeeded(); consumePendingShare(); consumeIntentFlags(); consumeSpotlight(); consumeHandoff() }
+        .task { purgeTemporary(); seedIfNeeded(); demoSidebarIfNeeded(); demoModelsIfNeeded(); demoProjectsIfNeeded(); demoMemoryIfNeeded(); demoShareIfNeeded(); demoOnDeviceIfNeeded(); demoUsageIfNeeded(); consumePendingShare(); consumeIntentFlags(); consumeSpotlight(); consumeHandoff(); WidgetBridge.refresh(context: context) }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { consumePendingShare(); consumeIntentFlags(); consumeSpotlight(); consumeHandoff() }
-            if phase == .background { indexSpotlightIfNeeded() }
+            if phase == .active { consumePendingShare(); consumeIntentFlags(); consumeSpotlight(); consumeHandoff(); WidgetBridge.refresh(context: context) }
+            if phase == .background { indexSpotlightIfNeeded(); WidgetBridge.refresh(context: context) }
         }
         .onChange(of: current?.id) { oldID, newID in
             guard let oldID, oldID != newID else { return }

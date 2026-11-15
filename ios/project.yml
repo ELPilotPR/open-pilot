@@ -24,6 +24,7 @@ targets:
     dependencies:
       - package: SwiftMath
       - target: OpenPilotShare
+      - target: OpenPilotWidget
     entitlements:
       path: OpenPilot/OpenPilot.entitlements
       properties:
@@ -98,6 +99,35 @@ targets:
         GENERATE_INFOPLIST_FILE: NO
         SKIP_INSTALL: YES
         APPLICATION_EXTENSION_API_ONLY: YES
+  OpenPilotWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - WidgetExtension
+      - path: OpenPilot/Services/WidgetSnapshot.swift
+    dependencies:
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+    entitlements:
+      path: WidgetExtension/WidgetExtension.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.openpilot.app
+    info:
+      path: WidgetExtension/Info.plist
+      properties:
+        CFBundleDisplayName: Open Pilot
+        CFBundleShortVersionString: "0.1.0"
+        CFBundleVersion: "1"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.openpilot.app.widget
+        TARGETED_DEVICE_FAMILY: "1,2"
+        GENERATE_INFOPLIST_FILE: NO
+        SKIP_INSTALL: YES
+        APPLICATION_EXTENSION_API_ONLY: YES
   OpenPilotTests:
     type: bundle.unit-test
     platform: iOS
@@ -115,6 +145,7 @@ schemes:
       targets:
         OpenPilot: all
         OpenPilotShare: all
+        OpenPilotWidget: all
     run:
       config: Debug
     test:
