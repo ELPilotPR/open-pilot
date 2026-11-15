@@ -47,6 +47,7 @@ struct ChatView: View {
     @State private var showAutoTag = false
     @State private var showRAG = false
     @State private var showVoiceNote = false
+    @State private var showDocScan = false
     @State private var editImageSource: Data? = nil
     @State private var editImagePrompt = ""
     @State private var showEditImagePrompt = false
@@ -207,6 +208,7 @@ struct ChatView: View {
         .sheet(isPresented: $showAutoTag) { AutoTagView(conversation: current) }
         .sheet(isPresented: $showRAG) { AttachmentQAView(conversation: current) }
         .sheet(isPresented: $showVoiceNote) { VoiceNoteView { text in input = text } }
+        .sheet(isPresented: $showDocScan) { DocumentScanView { text in input = text } }
         .alert(T("Edit image", "Editar imagen"), isPresented: $showEditImagePrompt) {
             TextField(T("Describe the change…", "Describe el cambio…"), text: $editImagePrompt)
             Button(T("Cancel", "Cancelar"), role: .cancel) { editImageSource = nil }
@@ -806,6 +808,9 @@ struct ChatView: View {
                     }
                     Button { showVoiceNote = true; Haptic.light() } label: {
                         Label(T("Voice note…", "Nota de voz…"), systemImage: "waveform")
+                    }
+                    Button { showDocScan = true; Haptic.light() } label: {
+                        Label(T("Scan document…", "Escanear documento…"), systemImage: "doc.viewfinder")
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle").font(.system(size: 18, weight: .medium))
