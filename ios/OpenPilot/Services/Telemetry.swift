@@ -18,11 +18,21 @@ enum ModelContextWindow {
         if m.contains("gemini") { return 1_000_000 }
         if m.contains("claude") { return 200_000 }
         if m.contains("qwen-long") { return 1_000_000 }
+        if m.contains("qwen3") || m.contains("qwen-3") { return 262_144 }
+        if m.contains("qwen2.5") || m.contains("qwen-2.5") { return 131_072 }
         if m.contains("qwen") { return 131_072 }
+        if m.contains("deepseek") { return 65_536 }
         if m.contains("llama-3") || m.contains("llama3") { return 131_072 }
         if m.contains("mistral") || m.contains("mixtral") { return 32_768 }
         if kind == "gguf" { return 8192 }
         return 32_768   // genérico OpenAI-compatible / LAN
+    }
+
+    /// Ventana efectiva: override manual > detectada del servidor > heurística.
+    static func resolve(model: String, kind: String, override: Int, detected: Int) -> Int {
+        if override > 0 { return override }
+        if detected > 0 { return detected }
+        return window(for: model, kind: kind)
     }
 }
 

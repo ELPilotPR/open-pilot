@@ -20,6 +20,9 @@ final class ProviderConfig {
     var createdAt: Date
     /// Soporte de generacion de imagenes: "auto" (detecta por host) | "yes" | "no".
     var imageCapability: String = "auto"
+    /// Ventana de contexto manual (tokens). 0 = automático (detectar del servidor
+    /// o estimar por familia). Útil cuando el server no la reporta (p. ej. Strata).
+    var contextWindow: Int = 0
 
     /// API key protegida por el Keychain. Lee del Keychain y, si aún no se ha
     /// migrado, cae al valor legacy para no perder la clave existente.

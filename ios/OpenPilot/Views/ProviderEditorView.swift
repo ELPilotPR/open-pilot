@@ -10,6 +10,8 @@ struct ProviderEditorView: View {
     @State private var scanning = false
     @State private var foundServers: [LocalServer] = []
     @State private var scanStatus: String?
+    @State private var detectingContext = false
+    @State private var contextStatus = ""
 
     var body: some View {
         Form {
@@ -38,6 +40,27 @@ struct ProviderEditorView: View {
                         .autocorrectionDisabled()
                         .keyboardType(.URL)
                     SecureField(T("API Key (optional)", "API Key (opcional)"), text: $provider.apiKey)
+                }
+            }
+
+            if provider.kind != "ondevice" {
+                Section {
+                    TextField(T("Context window (0 = auto)", "Ventana de contexto (0 = auto)"), value: $provider.contextWindow, format: .number)
+                        .keyboardType(.numberPad)
+                    Button { detectContext() } label: {
+                        HStack {
+                            Label(T("Detect from server", "Detectar del servidor"), systemImage: "arrow.down.circle")
+                            Spacer()
+                            if detectingContext { ProgressView() }
+                        }
+                    }
+                    .disabled(detectingContext)
+                    if !contextStatus.isEmpty { Text(contextStatus).font(.caption).foregroundStyle(.secondary) }
+                } header: {
+                    Text(T("Context", "Contexto"))
+                } footer: {
+                    Text(T("Max tokens this model accepts. 0 = auto-detect from the server or estimate by model family. Set it by hand if your server doesn't report it (e.g. 512000 for a 512k Qwen).",
+                           "Máx. de tokens que acepta el modelo. 0 = detectar del servidor o estimar por familia. Ponlo a mano si tu servidor no lo reporta (p. ej. 512000 para un Qwen de 512k)."))
                 }
             }
 
@@ -210,6 +233,24 @@ struct ProviderEditorView: View {
                 testResult = "Error: " + error.localizedDescription
             }
             testing = false
+        }
+    }
+
+    private func detectContext() {
+        detectingContext = true
+        contextStatus = T("Detecting…", "Detectando…")
+        let base = provider.baseURL
+        let key = provider.apiKey
+        let model = provider.models.first ?? ""
+        Task { @MainActor in
+            if let w = await ContextWindowDetector.detect(baseURL: base, apiKey: key, model: model) {
+                provider.contextWindow = w
+                try? context.save()
+                contextStatus = T("Detected: \(TokenFormat.short(w)) tokens.", "Detectado: \(TokenFormat.short(w)) tokens.")
+            } else {
+                contextStatus = T("This server doesn't report its context. Set it by hand (0 = estimate by model).", "Este servidor no reporta su contexto. Ponlo a mano (0 = estimar por modelo).")
+            }
+            detectingContext = false
         }
     }
 }

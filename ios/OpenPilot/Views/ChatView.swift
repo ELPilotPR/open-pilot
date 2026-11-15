@@ -14,6 +14,7 @@ struct ChatView: View {
     @Query private var providers: [ProviderConfig]
     @StateObject private var vm = ChatViewModel()
     @State private var input = ""
+    @State private var detectedWindow = 0
     @State private var pendingXSuccess: String?
     @State private var pendingXError: String?
     @State private var library = PromptLibrary.shared
@@ -1215,8 +1216,13 @@ struct ChatView: View {
     /// Gauge de contexto por chat: tokens usados / ventana del modelo, con % y barra
     /// de color (verde→naranja→rojo). La auto-compacción sigue marcándose aparte.
     private var contextBar: some View {
-        let window = ModelContextWindow.window(for: current?.model ?? activeModel,
-                                               kind: activeProvider?.kind ?? "openai")
+        let ctxModel = current?.model ?? activeModel
+        let ctxOverride = activeProvider?.contextWindow ?? 0
+        let window = ModelContextWindow.resolve(model: ctxModel,
+                                                kind: activeProvider?.kind ?? "openai",
+                                                override: ctxOverride,
+                                                detected: detectedWindow)
+        let ctxKey = "\(activeProvider?.id ?? "")|\(ctxModel)|\(ctxOverride)"
         let gauge = ContextGauge.make(used: contextTokens, window: window)
         let budget = ContextSettings.budgetTokens
         let over = ContextSettings.autoCompact && contextTokens > budget
@@ -1247,6 +1253,24 @@ struct ChatView: View {
         .padding(.horizontal, 16)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(T("Context", "Contexto") + ": \(gauge.percent)% " + T("used", "usado"))
+        .task(id: ctxKey) { await refreshContextWindow() }
+    }
+
+    /// Detecta la ventana de contexto real del servidor (cacheada) si no hay
+    /// override manual. Alimenta `detectedWindow` para que el gauge se actualice.
+    private func refreshContextWindow() async {
+        let model = current?.model ?? activeModel
+        let pid = activeProvider?.id ?? ""
+        let override = activeProvider?.contextWindow ?? 0
+        if override > 0 { detectedWindow = 0; return }
+        if let c = ContextWindowDetector.cached(providerID: pid, model: model) { detectedWindow = c; return }
+        detectedWindow = 0
+        guard let base = activeProvider?.baseURL, !base.isEmpty else { return }
+        let key = activeProvider?.apiKey ?? ""
+        if let w = await ContextWindowDetector.detect(baseURL: base, apiKey: key, model: model) {
+            ContextWindowDetector.store(w, providerID: pid, model: model)
+            detectedWindow = w
+        }
     }
 
     private var composer: some View {
