@@ -10,21 +10,36 @@ struct CanvasView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var instruction = ""
     @FocusState private var promptFocused: Bool
+    @State private var showPreview = false
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
                 if doc.versionTotal > 1 { versionBar }
-                TextEditor(text: $doc.content)
-                    .font(.system(.body, design: doc.language.isEmpty ? .default : .monospaced))
-                    .scrollContentBackground(.hidden)
-                    .background(OP.canvas)
-                    .padding(.horizontal, 8)
-                    .disabled(doc.isStreaming)
+                if previewable {
+                    Picker("", selection: $showPreview) {
+                        Text(T("Code", "Código")).tag(false)
+                        Text(T("Preview", "Vista previa")).tag(true)
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal, 16).padding(.vertical, 6)
+                }
+                if showPreview && previewable {
+                    CanvasWebView(html: CanvasPreview.htmlDocument(language: doc.language, source: doc.content))
+                        .background(Color.white)
+                } else {
+                    TextEditor(text: $doc.content)
+                        .font(.system(.body, design: doc.language.isEmpty ? .default : .monospaced))
+                        .scrollContentBackground(.hidden)
+                        .background(OP.canvas)
+                        .padding(.horizontal, 8)
+                        .disabled(doc.isStreaming)
+                }
                 Divider().overlay(OP.border)
                 promptBar
             }
             .background(OP.canvas)
+            .onAppear { if doc.startInPreview { showPreview = true } }
             .navigationTitle(doc.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -90,6 +105,8 @@ struct CanvasView: View {
         .padding(.horizontal, 16).padding(.vertical, 10)
         .background(OP.canvas)
     }
+
+    private var previewable: Bool { CanvasPreview.isPreviewable(doc.language) }
 
     private var canEdit: Bool {
         provider != nil && !doc.isStreaming &&

@@ -223,6 +223,8 @@ struct ChatView: View {
         if args.contains("-demoPrompts") { demoPrompts(); return }
         if args.contains("-demoCode") { demoCode(); return }
         if args.contains("-demoContext") { demoContext(); return }
+        if args.contains("-demoCanvasPreview") { demoCanvasPreview(); return }
+        if args.contains("-demoMermaid") { demoMermaid(); return }
         if args.contains("-demoCI") {
             CustomInstructions.aboutYou = "Soy Javier, desarrollador en Wisconsin. Trabajo en iOS y crypto."
             CustomInstructions.responsePrefs = "Responde siempre en español, directo y con tablas cuando haya datos."
@@ -1110,6 +1112,59 @@ struct ChatView: View {
     private func regenerate() {
         guard let p = activeProvider, let c = current else { return }
         vm.regenerate(conversation: c, provider: p, context: context)
+    }
+
+    /// Demo OFFLINE: Canvas HTML abierto en modo vista previa (WKWebView en el dispositivo).
+    private func demoCanvasPreview() {
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            let html = """
+            <!doctype html><html><head><meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <style>
+              body{font-family:-apple-system,system-ui,sans-serif;margin:0;padding:24px;
+                   background:linear-gradient(160deg,#4578FA,#1A246B);color:#fff;min-height:100vh}
+              .card{background:rgba(255,255,255,.14);border-radius:16px;padding:20px}
+              h1{margin:0 0 8px;font-size:24px}
+              p{opacity:.9;line-height:1.5}
+              button{margin-top:12px;padding:10px 18px;border:none;border-radius:10px;
+                     background:#fff;color:#1A246B;font-weight:600;font-size:15px}
+              #count{font-size:40px;font-weight:700;margin:8px 0}
+            </style></head>
+            <body><div class="card">
+              <h1>Open Pilot</h1>
+              <p>Vista previa en vivo de HTML + JavaScript, renderizada en el dispositivo.</p>
+              <div id="count">0</div>
+              <button onclick="tick()">Sumar</button>
+            </div>
+            <script>
+              let n=0;
+              function tick(){n++;document.getElementById('count').textContent=n;}
+            </script>
+            </body></html>
+            """
+            let doc = CanvasDocument(title: "HTML", content: html, language: "html")
+            doc.startInPreview = true
+            canvasDoc = doc
+        }
+    }
+
+    /// Demo OFFLINE: diagrama Mermaid renderizado con la librería bundleada (sin red).
+    private func demoMermaid() {
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            let src = """
+            graph TD
+              A[Usuario] --> B{Open Pilot}
+              B --> C[Modelo local]
+              B --> D[Nube opcional]
+              C --> E[Respuesta]
+              D --> E
+            """
+            let doc = CanvasDocument(title: "Mermaid", content: src, language: "mermaid")
+            doc.startInPreview = true
+            canvasDoc = doc
+        }
     }
 
     /// Abre Canvas con un contenido dado (desde un bloque de código o el botón).

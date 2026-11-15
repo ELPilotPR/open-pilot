@@ -19,6 +19,8 @@ final class CanvasDocument: ObservableObject, Identifiable {
     @Published var versionIndex: Int = 0
     @Published var isStreaming = false
     @Published var statusText = ""
+    /// When true, Canvas opens directly in live-preview mode (used by demos).
+    var startInPreview = false
 
     init(title: String = "Canvas", content: String = "", language: String = "") {
         self.title = title
