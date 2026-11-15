@@ -169,14 +169,69 @@ final class ChatViewModel: ObservableObject {
                 }
             } catch {
                 if !Task.isCancelled {
-                    self.errorText = error.localizedDescription
-                    if assistant.text.isEmpty { context.delete(assistant) }
+                    let recovered = await self.tryFallback(assistant: assistant, turns: turns,
+                        conversation: conversation, failedProvider: provider, context: context,
+                        hasImage: hasImage, isFirstTurn: isFirstTurn, userText: userText, originalError: error)
+                    if !recovered {
+                        self.errorText = error.localizedDescription
+                        if assistant.text.isEmpty { context.delete(assistant) }
+                    }
                 }
             }
             self.statusText = nil
             try? context.save()
             self.isStreaming = false
         }
+    }
+
+    /// Reintenta un turno fallido con el siguiente provider de la cadena de respaldo.
+    /// Solo errores transitorios; nunca toca el happy path. Devuelve true si recuperó.
+    private func tryFallback(assistant: Message, turns: [ChatTurn], conversation: Conversation,
+                             failedProvider: ProviderConfig, context: ModelContext, hasImage: Bool,
+                             isFirstTurn: Bool, userText: String, originalError: Error) async -> Bool {
+        guard FallbackSettings.enabled, ProviderFallback.isRetryable(originalError) else { return false }
+        let chain = ProviderFallback.chain(primaryID: failedProvider.id, fallbackIDs: FallbackSettings.ids)
+        let all = (try? context.fetch(FetchDescriptor<ProviderConfig>())) ?? []
+        var currentID = failedProvider.id
+        while let nextID = ProviderFallback.next(after: currentID, in: chain) {
+            currentID = nextID
+            guard let cfg = all.first(where: { $0.id == nextID }) else { continue }
+            let prov = ProviderFactory.make(kind: cfg.kind)
+            let model = VisionRouting.effectiveModel(current: conversation.model, hasImage: hasImage,
+                                                     kind: cfg.kind, baseURL: cfg.baseURL)
+            assistant.text = ""; assistant.reasoning = ""
+            self.statusText = T("Retrying with \(cfg.name)…", "Reintentando con \(cfg.name)…")
+            do {
+                let stream = prov.stream(turns: turns, model: model, baseURL: cfg.baseURL, apiKey: cfg.apiKey)
+                let genStart = Date()
+                var usagePrompt = 0, usageCompletion = 0
+                for try await ev in stream {
+                    if Task.isCancelled { return false }
+                    switch ev {
+                    case .delta(let t): assistant.text += t
+                    case .reasoning(let r): assistant.reasoning += r
+                    case .usage(let p, let c): usagePrompt = p; usageCompletion = c
+                    case .done: break
+                    }
+                }
+                let elapsed = Date().timeIntervalSince(genStart)
+                let outTok = usageCompletion > 0 ? usageCompletion : max(1, assistant.text.count / 4)
+                let inTok = usagePrompt > 0 ? usagePrompt : max(1, turns.reduce(0) { $0 + $1.content.count } / 4)
+                assistant.promptTokens = inTok
+                assistant.completionTokens = outTok
+                assistant.tokensPerSecond = elapsed > 0 ? Double(outTok) / elapsed : 0
+                if isFirstTurn {
+                    self.generateTitle(conversation: conversation, provider: cfg, context: context, firstUser: userText)
+                }
+                self.statusText = nil
+                return true
+            } catch {
+                if Task.isCancelled { return false }
+                if !ProviderFallback.isRetryable(error) { return false }
+                continue
+            }
+        }
+        return false
     }
 
     /// Crea el par user+assistant para un turno de imagen y devuelve el mensaje assistant.

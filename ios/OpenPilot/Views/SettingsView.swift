@@ -156,6 +156,17 @@ struct SettingsView: View {
 
             Section {
                 NavigationLink {
+                    FallbackSettingsView()
+                } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(T("Fallback", "Respaldo")).foregroundStyle(OP.textPrimary)
+                        Text(T("Retry with another provider on failure", "Reintenta con otro proveedor si falla")).font(.caption).foregroundStyle(OP.textSecondary)
+                    }
+                }
+            }
+
+            Section {
+                NavigationLink {
                     MemoryView()
                 } label: {
                     VStack(alignment: .leading, spacing: 2) {
