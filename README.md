@@ -24,13 +24,14 @@
 - **Prompt library & slash commands** — save reusable prompts and insert them by typing `/` in the composer (filtered live as you type). Manage them in Settings or the + menu.
 - **Code interpreter** — run JavaScript in an on-device sandbox (no network or file access) straight from a code block, and render `csv` blocks as bar charts. Nothing leaves the device.
 - **Context management** — a live token estimate above the composer, plus automatic compaction that condenses older messages into a summary when a chat grows past your chosen budget (recent messages stay verbatim).
+- **Model comparison** — send one prompt to several models at once and read their streaming answers side by side, each column re-pointable at any configured provider/model.
 - **Temporary chat** — a private mode that uses no memory and is never saved to history.
 - **Organize** — pin and archive conversations; the sidebar groups by date.
 - **Quality-of-life** — smart titles, regenerate, 👍/👎 feedback on replies, search within a conversation, response-length control, tokens/sec + token counts, tap-anywhere to dismiss the keyboard.
 - **English / Español** — follows the device language, with a manual override.
 - **Appearance** — Automatic / Light / Dark.
 - **Local-first storage** via SwiftData; **API keys in the device Keychain**. No server in the middle.
-- **Tested** — an XCTest suite covers the version tree, model catalog, custom instructions, file parsing, citations, Canvas helpers, projects, memory, feedback, temporary chat, in-conversation search, LaTeX parsing, export/import round-trips, prompt slash matching, JavaScript sandbox execution, CSV parsing, context compaction, and Canvas preview document building.
+- **Tested** — an XCTest suite covers the version tree, model catalog, custom instructions, file parsing, citations, Canvas helpers, projects, memory, feedback, temporary chat, in-conversation search, LaTeX parsing, export/import round-trips, prompt slash matching, JavaScript sandbox execution, CSV parsing, context compaction, Canvas preview document building, and model-comparison column logic.
 
 ## Privacy
 
@@ -69,6 +70,7 @@ ios/            Native iOS app (SwiftUI + SwiftData)
 - [x] Custom instructions, pin/archive, file attachments (PDF/docs/code)
 - [x] Canvas (model-assisted editor with versions)
 - [x] Canvas live preview (HTML/JS WebView) + offline Mermaid diagrams
+- [x] Side-by-side multi-model comparison
 - [x] Live voice mode (hands-free)
 - [x] Automated XCTest suite
 - [x] Projects + automatic memory, 👍/👎 feedback, temporary chat, in-conversation search

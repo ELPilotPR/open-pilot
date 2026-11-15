@@ -34,6 +34,8 @@ struct ChatView: View {
     @State private var editText = ""
     @State private var showSearch = false
     @State private var searchInChat = ""
+    @State private var showCompare = false
+    @StateObject private var compare = ModelCompare(columns: [])
     @FocusState private var composerFocused: Bool
     @AppStorage("selectedProviderID") private var selectedProviderID = "casa"
     @AppStorage("selectedModel") private var selectedModel = "swift-iq3_s"
@@ -177,6 +179,9 @@ struct ChatView: View {
         .sheet(item: $canvasDoc) { doc in
             CanvasView(doc: doc, provider: activeProvider, model: activeModel)
         }
+        .sheet(isPresented: $showCompare) {
+            CompareView(compare: compare, providers: providers)
+        }
         .onReceive(NotificationCenter.default.publisher(for: .openCanvas)) { note in
             let lang = note.userInfo?["lang"] as? String ?? ""
             let code = note.userInfo?["code"] as? String ?? ""
@@ -225,6 +230,7 @@ struct ChatView: View {
         if args.contains("-demoContext") { demoContext(); return }
         if args.contains("-demoCanvasPreview") { demoCanvasPreview(); return }
         if args.contains("-demoMermaid") { demoMermaid(); return }
+        if args.contains("-demoCompare") { demoCompare(); return }
         if args.contains("-demoCI") {
             CustomInstructions.aboutYou = "Soy Javier, desarrollador en Wisconsin. Trabajo en iOS y crypto."
             CustomInstructions.responsePrefs = "Responde siempre en español, directo y con tablas cuando haya datos."
@@ -923,6 +929,27 @@ struct ChatView: View {
         return ContextManager.estimateTokens(c.activeMessages.map { ChatTurn(role: $0.role, content: $0.text) })
     }
 
+    private func openCompare() {
+        compare.columns = ModelCompare.defaultColumns(providers: providers, preferred: activeProvider, model: activeModel)
+        showCompare = true
+    }
+
+    /// DEMO offline: abre el comparador con dos respuestas de ejemplo (sin red).
+    private func demoCompare() {
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            var a = ModelCompare.Column(providerID: "casa", model: "swift-iq3_s", label: "Casa")
+            a.text = "**Capital de Francia:** París.\n\nEs la ciudad más poblada del país y su centro político y cultural."
+            a.completionTokens = 31
+            var b = ModelCompare.Column(providerID: "qwen", model: "qwen-max", label: "Qwen")
+            b.text = "La capital de Francia es **París**, sede del gobierno y conocida como la *Ciudad de la Luz*."
+            b.completionTokens = 38
+            compare.columns = [a, b]
+            compare.prompt = "¿Cuál es la capital de Francia?"
+            showCompare = true
+        }
+    }
+
     /// Subtle context-size indicator above the composer; turns orange near the budget.
     private var contextBar: some View {
         let budget = ContextSettings.budgetTokens
@@ -958,6 +985,7 @@ struct ChatView: View {
                 Button { showFilePicker = true } label: { Label(T("Attach file", "Adjuntar archivo"), systemImage: "doc") }
                 Button { openCanvasFromChat() } label: { Label("Canvas", systemImage: "square.and.pencil") }
                 Button { showPromptLibrary = true } label: { Label(T("Prompt library", "Librería de prompts"), systemImage: "sparkles") }
+                Button { openCompare() } label: { Label(T("Compare models", "Comparar modelos"), systemImage: "rectangle.split.2x2") }
             } label: {
                 Image(systemName: "plus").font(.system(size: 18, weight: .medium))
                     .foregroundStyle(OP.textPrimary)
