@@ -12,6 +12,7 @@ struct ProviderEditorView: View {
     @State private var scanStatus: String?
     @State private var detectingContext = false
     @State private var contextStatus = ""
+    @State private var modelStatus = ""
 
     var body: some View {
         Form {
@@ -145,8 +146,14 @@ struct ProviderEditorView: View {
                     TextField(T("Add model (e.g. qwen-plus)", "Añadir modelo (ej. qwen-plus)"), text: $newModel)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
+                        .submitLabel(.done)
+                        .onSubmit { addModel() }
                     Button(T("Add", "Añadir")) { addModel() }
+                        .buttonStyle(.bordered)
                         .disabled(newModel.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+                if !modelStatus.isEmpty {
+                    Text(modelStatus).font(.caption).foregroundStyle(.secondary)
                 }
 
                 Button { discover() } label: {
@@ -161,7 +168,7 @@ struct ProviderEditorView: View {
                     Text(r).font(.caption).foregroundStyle(.secondary)
                 }
             } header: {
-                Text(T("Models", "Modelos"))
+                Text(T("Models", "Modelos") + " (\(provider.models.count))")
             } footer: {
                 Text(T("Type the model by hand (e.g. qwen-plus, qwen-max) or use Test to discover them via GET /models. Qwen/DashScope: https://dashscope.aliyuncs.com/compatible-mode/v1", "Escribe el modelo a mano (p. ej. qwen-plus, qwen-max) o usa Probar para descubrirlos con GET /models. Qwen/DashScope: https://dashscope.aliyuncs.com/compatible-mode/v1"))
             }
@@ -196,10 +203,20 @@ struct ProviderEditorView: View {
 
     private func addModel() {
         let m = newModel.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !m.isEmpty, !provider.models.contains(m) else { return }
+        guard !m.isEmpty else { return }
+        if provider.models.contains(m) {
+            modelStatus = T("Already added.", "Ya está añadido.")
+            newModel = ""
+            return
+        }
         provider.models = provider.models + [m]   // reasignar: SwiftData observa el SET, no el append in-place
         newModel = ""
-        try? context.save()
+        do {
+            try context.save()
+            modelStatus = T("Added ✓ (\(provider.models.count) models)", "Añadido ✓ (\(provider.models.count) modelos)")
+        } catch {
+            modelStatus = T("Couldn't save: ", "No se pudo guardar: ") + error.localizedDescription
+        }
     }
 
     private func scanLocal() {
