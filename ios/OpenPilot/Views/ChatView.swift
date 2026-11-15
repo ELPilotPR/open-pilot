@@ -266,6 +266,14 @@ struct ChatView: View {
         if args.contains("-demoVoice") { demoVoice(); return }
         if args.contains("-demoImageEdit") { demoImageEdit(); return }
         if args.contains("-demoResearch") { demoResearch(); return }
+        if args.contains("-demoComposer") {
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 500_000_000)
+                input = "Como es esto ? https://github.com/maillab/cloud-mail ?"
+                composerFocused = true
+            }
+            return
+        }
         if args.contains("-demoCI") {
             CustomInstructions.aboutYou = "Soy Javier, desarrollador en Wisconsin. Trabajo en iOS y crypto."
             CustomInstructions.responsePrefs = "Responde siempre en español, directo y con tablas cuando haya datos."
@@ -1093,7 +1101,17 @@ struct ChatView: View {
             if !slashMatches.isEmpty {
                 slashPanel
             }
-            HStack(alignment: .bottom, spacing: 6) {
+            VStack(spacing: 8) {
+                TextField(imageMode ? T("Describe the image…", "Describe la imagen…") : T("Ask anything", "Pregunta algo"),
+                          text: $input, axis: .vertical)
+                    .lineLimit(1...6)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .focused($composerFocused)
+                    .tint(OP.accent)
+                    .foregroundStyle(OP.textPrimary)
+                    .padding(.vertical, 4)
+                HStack(spacing: 6) {
             Menu {
                 PhotosPicker(selection: $photoItem, matching: .images) {
                     Label(T("Choose photo", "Elegir foto"), systemImage: "photo.on.rectangle")
@@ -1168,13 +1186,7 @@ struct ChatView: View {
                 }
                 .buttonStyle(ScaleButtonStyle())
             }
-            TextField(imageMode ? T("Describe the image…", "Describe la imagen…") : T("Ask anything", "Pregunta algo"),
-                      text: $input, axis: .vertical)
-                .lineLimit(1...6)
-                .focused($composerFocused)
-                .tint(OP.accent)
-                .foregroundStyle(OP.textPrimary)
-                .padding(.vertical, 7)
+                Spacer(minLength: 0)
             if vm.isStreaming {
                 Button { vm.stop(); Haptic.light() } label: {
                     Image(systemName: "stop.circle.fill").font(.system(size: 30)).foregroundStyle(OP.textPrimary)
@@ -1195,8 +1207,9 @@ struct ChatView: View {
                 .buttonStyle(ScaleButtonStyle())
                 .keyboardShortcut(.return, modifiers: .command)
             }
-        }
-        .padding(.horizontal, 10).padding(.vertical, 7)
+                }
+            }
+            .padding(.horizontal, 12).padding(.vertical, 9)
         .background(OP.elevated)
         .clipShape(RoundedRectangle(cornerRadius: 26))
         .overlay(RoundedRectangle(cornerRadius: 26).stroke(OP.border, lineWidth: 1))
