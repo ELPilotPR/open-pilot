@@ -26,6 +26,7 @@ targets:
       - target: OpenPilotShare
       - target: OpenPilotWidget
       - sdk: ActivityKit.framework
+      - target: OpenPilotKeyboard
     entitlements:
       path: OpenPilot/OpenPilot.entitlements
       properties:
@@ -133,6 +134,43 @@ targets:
         GENERATE_INFOPLIST_FILE: NO
         SKIP_INSTALL: YES
         APPLICATION_EXTENSION_API_ONLY: YES
+  OpenPilotKeyboard:
+    type: app-extension
+    platform: iOS
+    sources:
+      - KeyboardExtension
+      - path: OpenPilot/Services/KeyboardProvider.swift
+      - path: OpenPilot/Services/KeyboardChat.swift
+    dependencies:
+      - sdk: UIKit.framework
+    entitlements:
+      path: KeyboardExtension/KeyboardExtension.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.openpilot.app
+    info:
+      path: KeyboardExtension/Info.plist
+      properties:
+        CFBundleDisplayName: Open Pilot
+        CFBundleShortVersionString: "0.1.0"
+        CFBundleVersion: "1"
+        NSExtension:
+          NSExtensionAttributes:
+            IsASCIICapable: false
+            PrefersRightToLeft: false
+            PrimaryLanguage: en-US
+            RequestsOpenAccess: true
+          NSExtensionPointIdentifier: com.apple.keyboard-service
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).KeyboardViewController
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.openpilot.app.keyboard
+        TARGETED_DEVICE_FAMILY: "1,2"
+        GENERATE_INFOPLIST_FILE: NO
+        SKIP_INSTALL: YES
+        APPLICATION_EXTENSION_API_ONLY: YES
   OpenPilotTests:
     type: bundle.unit-test
     platform: iOS
@@ -151,6 +189,7 @@ schemes:
         OpenPilot: all
         OpenPilotShare: all
         OpenPilotWidget: all
+        OpenPilotKeyboard: all
     run:
       config: Debug
     test:

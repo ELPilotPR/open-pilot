@@ -164,6 +164,16 @@ struct SettingsView: View {
                     }
                 }
             }
+            Section {
+                NavigationLink {
+                    KeyboardSettingsView()
+                } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(T("AI Keyboard", "Teclado IA")).foregroundStyle(OP.textPrimary)
+                        Text(T("Ask your model from any app", "Pregunta a tu modelo desde cualquier app")).font(.caption).foregroundStyle(OP.textSecondary)
+                    }
+                }
+            }
 
             Section {
                 NavigationLink {
