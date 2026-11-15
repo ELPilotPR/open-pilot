@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UIKit
 
 struct ProviderEditorView: View {
     @Environment(\.modelContext) private var context
@@ -48,6 +49,7 @@ struct ProviderEditorView: View {
                 Section {
                     TextField(T("Context window (0 = auto)", "Ventana de contexto (0 = auto)"), value: $provider.contextWindow, format: .number)
                         .keyboardType(.numberPad)
+                        .onChange(of: provider.contextWindow) { _, _ in try? context.save() }
                     Button { detectContext() } label: {
                         HStack {
                             Label(T("Detect from server", "Detectar del servidor"), systemImage: "arrow.down.circle")
@@ -57,6 +59,11 @@ struct ProviderEditorView: View {
                     }
                     .disabled(detectingContext)
                     if !contextStatus.isEmpty { Text(contextStatus).font(.caption).foregroundStyle(.secondary) }
+                    HStack {
+                        Text(T("Effective context", "Contexto efectivo")).font(.caption).foregroundStyle(.secondary)
+                        Spacer()
+                        Text(TokenFormat.short(effectiveContext) + " tokens").font(.caption.weight(.semibold)).foregroundStyle(OP.accent)
+                    }
                 } header: {
                     Text(T("Context", "Contexto"))
                 } footer: {
@@ -188,6 +195,21 @@ struct ProviderEditorView: View {
         .navigationTitle(provider.name)
         .navigationBarTitleDisplayMode(.inline)
         .onDisappear { try? context.save() }
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button(T("Done", "Hecho")) {
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                }
+            }
+        }
+    }
+
+    /// Contexto que usará el gauge: override manual > detectado/cache > heurística.
+    private var effectiveContext: Int {
+        let model = provider.models.first ?? ""
+        let detected = ContextWindowDetector.cached(providerID: provider.id, model: model) ?? 0
+        return ModelContextWindow.resolve(model: model, kind: provider.kind, override: provider.contextWindow, detected: detected)
     }
 
     private var presets: [ModelPreset] { ModelCatalog.presets(for: provider.baseURL, kind: provider.kind) }
@@ -271,7 +293,7 @@ struct ProviderEditorView: View {
                 try? context.save()
                 contextStatus = T("Detected: \(TokenFormat.short(w)) tokens.", "Detectado: \(TokenFormat.short(w)) tokens.")
             } else {
-                contextStatus = T("This server doesn't report its context. Set it by hand (0 = estimate by model).", "Este servidor no reporta su contexto. Ponlo a mano (0 = estimar por modelo).")
+                contextStatus = T("This server doesn't report its context. Type your model's max above — e.g. 512000 for a 512k Qwen.", "Este servidor no reporta su contexto. Escribe arriba el máximo de tu modelo — p. ej. 512000 para un Qwen de 512k.")
             }
             detectingContext = false
         }

@@ -77,6 +77,14 @@ enum ContextWindowDetector {
         if let url = URL(string: base.hasSuffix("/") ? base + "models" : base + "/models"),
            let data = await fetch(url, apiKey: apiKey),
            let w = fromModelsJSON(data, model: model) { return w }
+        // 1b) detalle por modelo /v1/models/{id} (algunos servers lo exponen ahí)
+        if !model.isEmpty,
+           let url = URL(string: base.hasSuffix("/") ? base + "models/" + model : base + "/models/" + model),
+           let data = await fetch(url, apiKey: apiKey) {
+            if let obj = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+               let w = contextValue(from: obj), w > 0 { return w }
+            if let w = fromModelsJSON(data, model: model) { return w }
+        }
         // root sin /v1 para los endpoints nativos
         let root = base.replacingOccurrences(of: "/v1", with: "")
         // 2) llama.cpp /props

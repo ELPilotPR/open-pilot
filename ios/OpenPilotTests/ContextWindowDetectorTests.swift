@@ -31,6 +31,15 @@ final class ContextWindowDetectorTests: XCTestCase {
         XCTAssertEqual(ContextWindowDetector.fromModelsJSON(Data(json.utf8), model: "m"), 32768)
     }
 
+    func testDetailModelObjectContextValue() {
+        // Forma de /v1/models/{id}: objeto plano (sin envolver en "data").
+        let obj: [String: Any] = ["id": "swift-iq3_s", "context_length": 512000]
+        XCTAssertEqual(ContextWindowDetector.contextValue(from: obj), 512000)
+        let meta: [String: Any] = ["id": "m", "meta": ["max_model_len": 262144]]
+        XCTAssertEqual(ContextWindowDetector.contextValue(from: meta), 262144)
+        XCTAssertNil(ContextWindowDetector.contextValue(from: ["id": "m", "label": "x"]))
+    }
+
     // MARK: - llama.cpp /props
 
     func testPropsDefaultGenerationSettings() {
