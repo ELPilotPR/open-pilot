@@ -42,6 +42,7 @@ struct ChatView: View {
     @StateObject private var research = DeepResearch()
     @State private var showResearch = false
     @State private var showVoicePicker = false
+    @State private var showSummary = false
     @State private var editImageSource: Data? = nil
     @State private var editImagePrompt = ""
     @State private var showEditImagePrompt = false
@@ -197,6 +198,7 @@ struct ChatView: View {
             DeepResearchView(research: research, provider: activeProvider, model: activeModel)
         }
         .sheet(isPresented: $showVoicePicker) { VoicePickerView() }
+        .sheet(isPresented: $showSummary) { SummaryView(conversation: current) }
         .alert(T("Edit image", "Editar imagen"), isPresented: $showEditImagePrompt) {
             TextField(T("Describe the change…", "Describe el cambio…"), text: $editImagePrompt)
             Button(T("Cancel", "Cancelar"), role: .cancel) { editImageSource = nil }
@@ -781,6 +783,15 @@ struct ChatView: View {
                 }
                 .buttonStyle(ScaleButtonStyle())
                 .keyboardShortcut("f", modifiers: .command)
+                Menu {
+                    Button { showSummary = true; Haptic.light() } label: {
+                        Label(T("Summarize (TL;DR)", "Resumir (TL;DR)"), systemImage: "text.badge.checkmark")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle").font(.system(size: 18, weight: .medium))
+                        .accessibilityLabel(T("More actions", "Más acciones"))
+                }
+                .buttonStyle(ScaleButtonStyle())
                 Button(action: { onNewChat(); Haptic.light() }) {
                     Image(systemName: "square.and.pencil").font(.system(size: 18, weight: .medium))
                         .accessibilityLabel(T("New chat", "Nueva conversación"))
