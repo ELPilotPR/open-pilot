@@ -60,4 +60,38 @@ final class DeepResearchTests: XCTestCase {
         XCTAssertTrue(turns[0].content.contains("[1]"))
         XCTAssertTrue(turns[0].content.contains("full"))
     }
+
+    func testRoundRobinInterleavesByRank() {
+        let a = [WebSource(title: "a1", url: "https://a1.com", snippet: ""),
+                 WebSource(title: "a2", url: "https://a2.com", snippet: "")]
+        let b = [WebSource(title: "b1", url: "https://b1.com", snippet: ""),
+                 WebSource(title: "b2", url: "https://b2.com", snippet: "")]
+        let out = DeepResearchPlanner.roundRobinMerge([a, b], limit: 10)
+        XCTAssertEqual(out.map { $0.title }, ["a1", "b1", "a2", "b2"])
+    }
+
+    func testRoundRobinDedupsAcrossLists() {
+        let a = [WebSource(title: "a", url: "https://x.com", snippet: "")]
+        let b = [WebSource(title: "b", url: "https://X.com", snippet: ""),
+                 WebSource(title: "c", url: "https://y.com", snippet: "")]
+        let out = DeepResearchPlanner.roundRobinMerge([a, b], limit: 10)
+        XCTAssertEqual(out.map { $0.title }, ["a", "c"])
+    }
+
+    func testRoundRobinCapsLimit() {
+        let a = (0..<5).map { WebSource(title: "a\($0)", url: "https://a\($0).com", snippet: "") }
+        let b = (0..<5).map { WebSource(title: "b\($0)", url: "https://b\($0).com", snippet: "") }
+        XCTAssertEqual(DeepResearchPlanner.roundRobinMerge([a, b], limit: 3).count, 3)
+    }
+
+    func testRoundRobinEmpty() {
+        XCTAssertEqual(DeepResearchPlanner.roundRobinMerge([], limit: 5).count, 0)
+        XCTAssertEqual(DeepResearchPlanner.roundRobinMerge([[]], limit: 5).count, 0)
+    }
+
+    func testSynthesisIncludesTrustNotice() {
+        let src = WebSource(title: "T", url: "https://t.com", snippet: "s")
+        let turns = DeepResearchPlanner.synthesisTurns(question: "Q?", sources: [src])
+        XCTAssertTrue(turns[0].content.contains(WebSearchService.trustNotice))
+    }
 }

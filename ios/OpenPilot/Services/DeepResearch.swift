@@ -44,6 +44,28 @@ enum DeepResearchPlanner {
         return out
     }
 
+    /// Merge round-robin de varias listas de fuentes (adaptado de dsh
+    /// `mergeSearchResults`): intercala por rango — el top de cada sub-consulta
+    /// antes que el segundo de cualquiera — con dedup por URL case-insensitive y
+    /// tope `limit`. Reparte la diversidad entre consultas en vez de agotar una.
+    static func roundRobinMerge(_ lists: [[WebSource]], limit: Int) -> [WebSource] {
+        var seen = Set<String>()
+        var out: [WebSource] = []
+        let maxRank = lists.map { $0.count }.max() ?? 0
+        for rank in 0..<maxRank {
+            for list in lists {
+                guard rank < list.count else { continue }
+                let s = list[rank]
+                let key = s.url.lowercased()
+                if seen.contains(key) { continue }
+                seen.insert(key)
+                out.append(s)
+                if out.count >= limit { return out }
+            }
+        }
+        return out
+    }
+
     /// Concatena los deltas de un stream (puro, testeable).
     static func reduce(_ events: [ChatEvent]) -> String {
         events.reduce(into: "") { acc, ev in
@@ -59,6 +81,8 @@ enum DeepResearchPlanner {
         línea donde aportes un dato. No inventes datos ni URLs; si algo no está en las fuentes, \
         dilo. Cierra con una sección "Fuentes" que liste las URLs usadas.
         Pregunta: \(question)
+
+        \(WebSearchService.trustNotice)
         Fuentes:
         """
         for (i, src) in sources.enumerated() {
@@ -131,16 +155,17 @@ final class DeepResearch: ObservableObject {
                 let queries = parsed.isEmpty ? [q] : parsed
                 self.steps = queries.map { Step(query: $0) }
                 self.phase = .searching
-                var gathered: [WebSource] = []
+                var perQuery: [[WebSource]] = []
                 for i in queries.indices {
                     if Task.isCancelled { break }
                     self.currentStep = i
                     let found = await WebSearchService.enriched(query: queries[i], limit: 4)
-                    gathered = DeepResearchPlanner.dedupSources(gathered + found, limit: 12)
+                    perQuery.append(found)
                     self.steps[i].sourceCount = found.count
                     self.steps[i].isDone = true
-                    self.sources = gathered
+                    self.sources = DeepResearchPlanner.roundRobinMerge(perQuery, limit: 12)
                 }
+                let gathered = DeepResearchPlanner.roundRobinMerge(perQuery, limit: 12)
                 if Task.isCancelled { self.isRunning = false; return }
                 self.phase = .synthesizing
                 let turns = DeepResearchPlanner.synthesisTurns(question: q, sources: gathered)

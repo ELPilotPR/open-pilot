@@ -17,6 +17,7 @@ struct MessageRow: View {
     @State private var saved = false
     @State private var appeared = false
     @State private var reasoningExpanded = false
+    @State private var sourcesExpanded = false
     @ObservedObject private var voice = VoiceManager.shared
 
     var body: some View {
@@ -277,24 +278,82 @@ struct MessageRow: View {
     }
 
     private var sourcesView: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(Array(message.sources.enumerated()), id: \.element.id) { idx, src in
-                    if let u = URL(string: src.url) {
-                        Link(destination: u) {
-                            HStack(spacing: 4) {
-                                Text("[\(idx + 1)]").font(.caption2.weight(.bold))
-                                Text(src.title.isEmpty ? src.url : src.title)
-                                    .font(.caption2).lineLimit(1)
+        VStack(alignment: .leading, spacing: 8) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) { sourcesExpanded.toggle() }
+                Haptic.selection()
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "globe").font(.caption2)
+                    Text(T("Sources (\(message.sources.count))", "Fuentes (\(message.sources.count))"))
+                        .font(.caption.weight(.semibold))
+                    Image(systemName: sourcesExpanded ? "chevron.up" : "chevron.down").font(.caption2)
+                }
+                .foregroundStyle(OP.textSecondary)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(T("Sources", "Fuentes"))
+            .accessibilityValue("\(message.sources.count)")
+            if sourcesExpanded {
+                VStack(spacing: 6) {
+                    ForEach(Array(message.sources.enumerated()), id: \.element.id) { idx, src in
+                        sourceRow(idx: idx, src: src)
+                    }
+                }
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(Array(message.sources.enumerated()), id: \.element.id) { idx, src in
+                            if let u = URL(string: src.url) {
+                                Link(destination: u) {
+                                    HStack(spacing: 5) {
+                                        FaviconView(url: src.url, size: 14)
+                                        Text("[\(idx + 1)]").font(.caption2.weight(.bold))
+                                        Text(src.title.isEmpty ? CitationReference.domain(of: src.url) : src.title)
+                                            .font(.caption2).lineLimit(1)
+                                    }
+                                    .foregroundStyle(OP.accent)
+                                    .padding(.horizontal, 10).padding(.vertical, 6)
+                                    .background(OP.userBubble)
+                                    .clipShape(Capsule())
+                                }
                             }
-                            .foregroundStyle(OP.accent)
-                            .padding(.horizontal, 10).padding(.vertical, 6)
-                            .background(OP.userBubble)
-                            .clipShape(Capsule())
                         }
                     }
                 }
             }
         }
+    }
+
+    private func sourceRow(idx: Int, src: WebSource) -> some View {
+        Group {
+            if let u = URL(string: src.url) {
+                Link(destination: u) { sourceRowContent(idx: idx, src: src) }
+            } else {
+                sourceRowContent(idx: idx, src: src)
+            }
+        }
+    }
+
+    private func sourceRowContent(idx: Int, src: WebSource) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            FaviconView(url: src.url, size: 20)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 5) {
+                    Text("[\(idx + 1)]").font(.caption2.weight(.bold)).foregroundStyle(OP.accent)
+                    Text(src.title.isEmpty ? src.url : src.title)
+                        .font(.caption.weight(.semibold)).foregroundStyle(OP.textPrimary).lineLimit(1)
+                }
+                Text(CitationReference.domain(of: src.url)).font(.caption2).foregroundStyle(OP.textTertiary)
+                if !src.snippet.isEmpty {
+                    Text(src.snippet).font(.caption2).foregroundStyle(OP.textSecondary).lineLimit(2)
+                }
+            }
+            Spacer(minLength: 0)
+            Image(systemName: "arrow.up.right").font(.caption2).foregroundStyle(OP.textTertiary)
+        }
+        .padding(10)
+        .background(OP.userBubble)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 }
