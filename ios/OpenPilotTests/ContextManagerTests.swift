@@ -76,4 +76,22 @@ final class ContextManagerTests: XCTestCase {
         let p = ContextManager.compact(turns, budget: 100, keepRecent: 2)
         XCTAssertEqual(p.compacted.last?.images.count, 1)
     }
+
+    // MARK: - Presupuesto efectivo (auto escala con la ventana)
+
+    func testEffectiveBudgetAutoScalesWithWindow() {
+        XCTAssertEqual(ContextManager.effectiveBudget(window: 512000, manual: 0), 358400)
+        XCTAssertEqual(ContextManager.effectiveBudget(window: 32768, manual: 0), 22937)
+        XCTAssertEqual(ContextManager.effectiveBudget(window: 131072, manual: 0), 91750)
+    }
+
+    func testEffectiveBudgetManualOverrides() {
+        XCTAssertEqual(ContextManager.effectiveBudget(window: 512000, manual: 12000), 12000)
+        XCTAssertEqual(ContextManager.effectiveBudget(window: 8192, manual: 4000), 4000)
+    }
+
+    func testEffectiveBudgetFloor() {
+        XCTAssertEqual(ContextManager.effectiveBudget(window: 0, manual: 0), 2000)
+        XCTAssertEqual(ContextManager.effectiveBudget(window: 1000, manual: 0), 2000)
+    }
 }

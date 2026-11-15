@@ -80,6 +80,9 @@ final class ChatViewModel: ObservableObject {
         let model = VisionRouting.effectiveModel(current: conversation.model, hasImage: hasImage,
                                                  kind: provider.kind, baseURL: provider.baseURL)
         let baseURL = provider.baseURL
+        let ctxWindow = ModelContextWindow.resolve(model: model, kind: provider.kind,
+                                                   override: provider.contextWindow,
+                                                   detected: ContextWindowDetector.cached(providerID: provider.id, model: model) ?? 0)
         let apiKey = provider.apiKey
 
         isStreaming = true
@@ -87,7 +90,7 @@ final class ChatViewModel: ObservableObject {
             guard let self else { return }
             var turns = history
             if ContextSettings.autoCompact {
-                let plan = ContextManager.compact(turns, budget: ContextSettings.budgetTokens)
+                let plan = ContextManager.compact(turns, budget: ContextManager.effectiveBudget(window: ctxWindow, manual: ContextSettings.budgetTokens))
                 if plan.didCompact {
                     turns = plan.compacted
                     self.statusText = T("Compacting context…", "Compactando contexto…")

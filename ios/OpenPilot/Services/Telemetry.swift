@@ -3,9 +3,9 @@ import Foundation
 /// Telemetría de generación 100% local: velocidad en vivo (tok/s) y gauge de
 /// contexto por chat. Sin backend; todo se estima en el dispositivo.
 ///
-/// La ventana de contexto es aproximada (por familia de modelo) y solo alimenta
-/// el gauge visual. El presupuesto de auto-compacción sigue siendo
-/// `ContextSettings.budgetTokens`, independiente de esta ventana.
+/// La ventana de contexto alimenta el gauge visual y, por defecto, el presupuesto
+/// de auto-compacción (`ContextManager.effectiveBudget`, ~70% de la ventana).
+/// `ContextSettings.budgetTokens` >0 fuerza un presupuesto manual fijo.
 
 /// Ventana de contexto aproximada por modelo (tokens).
 enum ModelContextWindow {

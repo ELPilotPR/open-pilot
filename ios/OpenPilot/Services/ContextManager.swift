@@ -6,8 +6,9 @@ enum ContextSettings {
         get { UserDefaults.standard.object(forKey: "context.autoCompact") as? Bool ?? true }
         set { UserDefaults.standard.set(newValue, forKey: "context.autoCompact") }
     }
+    /// 0 = auto (escala con la ventana del modelo); >0 = presupuesto manual fijo.
     static var budgetTokens: Int {
-        get { let v = UserDefaults.standard.integer(forKey: "context.budget"); return v > 0 ? v : 6000 }
+        get { UserDefaults.standard.integer(forKey: "context.budget") }
         set { UserDefaults.standard.set(newValue, forKey: "context.budget") }
     }
 }
@@ -22,6 +23,14 @@ enum ContextManager {
 
     static func estimateTokens(_ turns: [ChatTurn]) -> Int {
         turns.reduce(0) { $0 + max(1, $1.content.count / 4) }
+    }
+
+    /// Presupuesto de compactación: manual si >0; si no (auto), ~70% de la ventana
+    /// del modelo, dejando margen para el system prompt y la respuesta.
+    static let autoBudgetFraction = 0.7
+    static func effectiveBudget(window: Int, manual: Int) -> Int {
+        if manual > 0 { return manual }
+        return max(2000, Int(Double(max(window, 2000)) * autoBudgetFraction))
     }
 
     struct Plan {

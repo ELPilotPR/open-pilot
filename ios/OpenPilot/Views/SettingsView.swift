@@ -13,7 +13,7 @@ struct SettingsView: View {
     @AppStorage("customAboutYou") private var ciAbout = ""
     @AppStorage("customResponsePrefs") private var ciPrefs = ""
     @AppStorage("context.autoCompact") private var autoCompact = true
-    @AppStorage("context.budget") private var contextBudget = 6000
+    @AppStorage("context.budget") private var contextBudget = 0
     @AppStorage("hapticsEnabled") private var hapticsEnabled = true
     @State private var showVoicePicker = false
 
@@ -100,17 +100,20 @@ struct SettingsView: View {
             Section {
                 Toggle(T("Auto-compact context", "Auto-compactar contexto"), isOn: $autoCompact)
                 Picker(T("Context budget", "Presupuesto de contexto"), selection: $contextBudget) {
+                    Text(T("Auto (by model)", "Auto (según modelo)")).tag(0)
                     Text("2k tokens").tag(2000)
                     Text("4k tokens").tag(4000)
                     Text("6k tokens").tag(6000)
                     Text("8k tokens").tag(8000)
                     Text("12k tokens").tag(12000)
+                    Text("32k tokens").tag(32000)
+                    Text("128k tokens").tag(128000)
                 }
             } header: {
                 Text(T("Context", "Contexto"))
             } footer: {
-                Text(T("When a chat grows past the budget, older messages are condensed into a summary so it stays within the model's window. Recent messages are kept verbatim.",
-                       "Cuando un chat supera el presupuesto, los mensajes antiguos se condensan en un resumen para no exceder la ventana del modelo. Los recientes se conservan intactos."))
+                Text(T("Auto scales the budget with the model's context window (~70%), so a 512k model keeps far more history. Pick a fixed value to override. When a chat grows past the budget, older messages are condensed into a summary; recent ones stay verbatim.",
+                       "Auto escala el presupuesto con la ventana del modelo (~70%), así un modelo de 512k conserva mucho más historial. Elige un valor fijo para forzarlo. Cuando un chat supera el presupuesto, los mensajes antiguos se condensan en un resumen; los recientes se conservan intactos."))
             }
 
             Section {

@@ -1224,7 +1224,7 @@ struct ChatView: View {
                                                 detected: detectedWindow)
         let ctxKey = "\(activeProvider?.id ?? "")|\(ctxModel)|\(ctxOverride)"
         let gauge = ContextGauge.make(used: contextTokens, window: window)
-        let budget = ContextSettings.budgetTokens
+        let budget = ContextManager.effectiveBudget(window: window, manual: ContextSettings.budgetTokens)
         let over = ContextSettings.autoCompact && contextTokens > budget
         let color: Color = gauge.tier == 2 ? .red : (gauge.tier == 1 ? .orange : OP.accent)
         return VStack(alignment: .leading, spacing: 3) {
