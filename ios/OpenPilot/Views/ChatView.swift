@@ -36,6 +36,7 @@ struct ChatView: View {
     @State private var searchInChat = ""
     @State private var showCompare = false
     @StateObject private var compare = ModelCompare(columns: [])
+    @State private var showVoicePicker = false
     @FocusState private var composerFocused: Bool
     @AppStorage("selectedProviderID") private var selectedProviderID = "casa"
     @AppStorage("selectedModel") private var selectedModel = "swift-iq3_s"
@@ -182,6 +183,7 @@ struct ChatView: View {
         .sheet(isPresented: $showCompare) {
             CompareView(compare: compare, providers: providers)
         }
+        .sheet(isPresented: $showVoicePicker) { VoicePickerView() }
         .onReceive(NotificationCenter.default.publisher(for: .openCanvas)) { note in
             let lang = note.userInfo?["lang"] as? String ?? ""
             let code = note.userInfo?["code"] as? String ?? ""
@@ -231,6 +233,7 @@ struct ChatView: View {
         if args.contains("-demoCanvasPreview") { demoCanvasPreview(); return }
         if args.contains("-demoMermaid") { demoMermaid(); return }
         if args.contains("-demoCompare") { demoCompare(); return }
+        if args.contains("-demoVoice") { demoVoice(); return }
         if args.contains("-demoCI") {
             CustomInstructions.aboutYou = "Soy Javier, desarrollador en Wisconsin. Trabajo en iOS y crypto."
             CustomInstructions.responsePrefs = "Responde siempre en español, directo y con tablas cuando haya datos."
@@ -927,6 +930,14 @@ struct ChatView: View {
     private var contextTokens: Int {
         guard let c = current else { return 0 }
         return ContextManager.estimateTokens(c.activeMessages.map { ChatTurn(role: $0.role, content: $0.text) })
+    }
+
+    /// DEMO offline: abre el selector de voz del dispositivo.
+    private func demoVoice() {
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            showVoicePicker = true
+        }
     }
 
     private func openCompare() {

@@ -75,6 +75,7 @@ final class VoiceManager: NSObject, ObservableObject, AVSpeechSynthesizerDelegat
         if recognizer.supportsOnDeviceRecognition { req.requiresOnDeviceRecognition = true }
         request = req
         let input = engine.inputNode
+        try? input.setVoiceProcessingEnabled(true)   // echo cancellation (barge-in)
         let format = input.outputFormat(forBus: 0)
         input.removeTap(onBus: 0)
         input.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
@@ -128,9 +129,10 @@ final class VoiceManager: NSObject, ObservableObject, AVSpeechSynthesizerDelegat
         try? session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .duckOthers])
         try? session.setActive(true, options: .notifyOthersOnDeactivation)
         let utt = AVSpeechUtterance(string: clean)
-        utt.voice = AVSpeechSynthesisVoice(language: "es-ES")
-            ?? AVSpeechSynthesisVoice(language: "es-MX")
-            ?? AVSpeechSynthesisVoice(language: "es-US")
+        let prefix = VoiceCatalog.currentPrefix
+        utt.voice = AVSpeechSynthesisVoice(identifier: VoiceSettings.identifier)
+            ?? AVSpeechSynthesisVoice(language: prefix == "es" ? "es-ES" : "en-US")
+            ?? AVSpeechSynthesisVoice(language: prefix)
         utt.rate = AVSpeechUtteranceDefaultSpeechRate
         speakingID = id
         synth.speak(utt)

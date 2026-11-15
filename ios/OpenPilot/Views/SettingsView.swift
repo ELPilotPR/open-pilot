@@ -13,6 +13,7 @@ struct SettingsView: View {
     @AppStorage("customResponsePrefs") private var ciPrefs = ""
     @AppStorage("context.autoCompact") private var autoCompact = true
     @AppStorage("context.budget") private var contextBudget = 6000
+    @State private var showVoicePicker = false
 
     var body: some View {
         List {
@@ -142,6 +143,18 @@ struct SettingsView: View {
             }
 
             Section {
+                Button { showVoicePicker = true } label: {
+                    HStack {
+                        Label(T("Voice", "Voz"), systemImage: "speaker.wave.2")
+                        Spacer()
+                        Image(systemName: "chevron.right").font(.caption).foregroundStyle(OP.textTertiary)
+                    }
+                }
+            } header: {
+                Text(T("Speech", "Voz"))
+            }
+
+            Section {
                 Button { addProvider() } label: {
                     Label(T("Add OpenAI-compatible API", "Agregar API OpenAI-compatible"), systemImage: "plus")
                 }
@@ -152,6 +165,7 @@ struct SettingsView: View {
         .tint(OP.accent)
         .navigationTitle(T("Settings", "Ajustes"))
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showVoicePicker) { VoicePickerView() }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button(T("Done", "Listo")) { dismiss() }

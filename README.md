@@ -14,7 +14,7 @@
 - **Web search with inline citations** — grounded answers with tappable source pills.
 - **Generative UI cards** — native weather and currency-conversion cards rendered from public, key-free APIs (Open-Meteo, Frankfurter/BCE).
 - **Image generation** for providers that support it.
-- **Voice** — dictate messages with on-device speech recognition, read replies aloud, and a **live voice mode** for continuous hands-free conversation (listen → reply → listen).
+- **Voice** — dictate messages with on-device speech recognition, read replies aloud with a **pickable device voice**, and a **live voice mode** for continuous hands-free conversation (listen → reply → listen) with **barge-in** (interrupt the assistant by speaking).
 - **Attachments** — photos from library or camera, plus **files** (PDF, documents, code) extracted into the model's context.
 - **Canvas** — a side editor for code or text you can revise by hand or ask the model to change, with navigable versions. A **Code / Preview** toggle renders HTML & JavaScript in an on-device WebView and draws **Mermaid** diagrams fully offline (bundled mermaid.js).
 - **Edit & resend with versions** — editing a message keeps the original and lets you flip between branches (`< 1/2 >`); **rename** and search chats (by title or content).
@@ -31,7 +31,7 @@
 - **English / Español** — follows the device language, with a manual override.
 - **Appearance** — Automatic / Light / Dark.
 - **Local-first storage** via SwiftData; **API keys in the device Keychain**. No server in the middle.
-- **Tested** — an XCTest suite covers the version tree, model catalog, custom instructions, file parsing, citations, Canvas helpers, projects, memory, feedback, temporary chat, in-conversation search, LaTeX parsing, export/import round-trips, prompt slash matching, JavaScript sandbox execution, CSV parsing, context compaction, Canvas preview document building, and model-comparison column logic.
+- **Tested** — an XCTest suite covers the version tree, model catalog, custom instructions, file parsing, citations, Canvas helpers, projects, memory, feedback, temporary chat, in-conversation search, LaTeX parsing, export/import round-trips, prompt slash matching, JavaScript sandbox execution, CSV parsing, context compaction, Canvas preview document building, model-comparison column logic, and voice selection/barge-in logic.
 
 ## Privacy
 
@@ -71,6 +71,7 @@ ios/            Native iOS app (SwiftUI + SwiftData)
 - [x] Canvas (model-assisted editor with versions)
 - [x] Canvas live preview (HTML/JS WebView) + offline Mermaid diagrams
 - [x] Side-by-side multi-model comparison
+- [x] Voice picker + barge-in (interrupt the assistant by speaking)
 - [x] Live voice mode (hands-free)
 - [x] Automated XCTest suite
 - [x] Projects + automatic memory, 👍/👎 feedback, temporary chat, in-conversation search

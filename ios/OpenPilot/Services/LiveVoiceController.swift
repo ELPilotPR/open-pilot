@@ -40,13 +40,25 @@ final class LiveVoiceController: ObservableObject {
         guard isActive, phase == .thinking else { return }
         phase = .speaking
         voice.toggleSpeak(text, id: UUID())
+        let barge = VoiceSettings.bargeIn
+        if barge { Task { await voice.startDictation() } }   // listen during playback
         pollTask?.cancel()
         pollTask = Task { @MainActor [weak self] in
             try? await Task.sleep(nanoseconds: 300_000_000)
             guard let self else { return }
             while self.isActive && self.voice.speakingID != nil {
-                try? await Task.sleep(nanoseconds: 200_000_000)
+                if VoiceCatalog.shouldBargeIn(transcript: self.voice.liveTranscript, enabled: barge) {
+                    let heard = self.voice.liveTranscript
+                    self.voice.stopSpeaking()
+                    self.voice.stopDictation()
+                    if !heard.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        self.submit(heard); return
+                    }
+                    self.beginListening(); return
+                }
+                try? await Task.sleep(nanoseconds: 150_000_000)
             }
+            if barge { self.voice.stopDictation() }
             if self.isActive { self.beginListening() }
         }
     }
