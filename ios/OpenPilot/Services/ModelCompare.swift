@@ -16,11 +16,15 @@ final class ModelCompare: ObservableObject {
         var isStreaming = false
         var error: String?
         var completionTokens = 0
+        var history: [String] = []      // answer per completed debate round
+        var liveTPS: Double? = nil      // live tokens/sec while streaming
     }
 
     @Published var columns: [Column]
     @Published var prompt: String = ""
     @Published var isRunning = false
+    @Published var debateRounds: Int = 1   // 1 = plain compare; 2+ = multi-round debate
+    @Published var round: Int = 0          // current round while running
 
     init(columns: [Column], prompt: String = "") {
         self.columns = columns
@@ -59,42 +63,71 @@ final class ModelCompare: ObservableObject {
         return [colA]
     }
 
-    /// Streams every column concurrently. Each child task hops to the main actor,
-    /// so column mutations are serialised and safe.
+    /// Streams every column concurrently, round by round. Round 1 asks the shared
+    /// prompt; later rounds feed each model the others' previous answers so they
+    /// debate (critique + refine). Each child task hops to the main actor, so
+    /// column mutations are serialised and safe. Live tok/s is sampled per column.
     func run(providers: [ProviderConfig]) {
         let p = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !p.isEmpty, !isRunning, !columns.isEmpty else { return }
         isRunning = true
-        for i in columns.indices {
-            columns[i].text = ""
-            columns[i].reasoning = ""
-            columns[i].error = nil
-            columns[i].completionTokens = 0
-            columns[i].isStreaming = true
-        }
-        let turns = Self.turns(for: p)
-        let snapshot = columns
+        let rounds = max(1, debateRounds)
+        for i in columns.indices { columns[i].history = [] }
+        let snapshot = columns.map { (providerID: $0.providerID, model: $0.model, label: $0.label) }
         Task { @MainActor in
-            await withTaskGroup(of: Void.self) { group in
-                for (idx, col) in snapshot.enumerated() {
-                    group.addTask { @MainActor in
-                        guard let prov = providers.first(where: { $0.id == col.providerID }) else {
-                            self.columns[idx].error = T("Provider unavailable", "Proveedor no disponible")
-                            self.columns[idx].isStreaming = false
-                            return
+            for r in 1...rounds {
+                self.round = r
+                for i in self.columns.indices {
+                    self.columns[i].text = ""
+                    self.columns[i].reasoning = ""
+                    self.columns[i].error = nil
+                    self.columns[i].completionTokens = 0
+                    self.columns[i].liveTPS = nil
+                    self.columns[i].isStreaming = true
+                }
+                // Opponents' previous-round answers (last completed round).
+                let prev = self.columns.map { DebateSupport.Opponent(label: $0.label, text: $0.history.last ?? "") }
+                await withTaskGroup(of: Void.self) { group in
+                    for (idx, col) in snapshot.enumerated() {
+                        let turns: [ChatTurn]
+                        if r == 1 {
+                            turns = Self.turns(for: p)
+                        } else {
+                            let opponents = prev.enumerated().filter { $0.offset != idx }.map { $0.element }
+                            turns = DebateSupport.debateTurns(original: p, round: r, opponents: opponents)
                         }
-                        let client = ProviderFactory.make(kind: prov.kind)
-                        let base = prov.baseURL, key = prov.apiKey, model = col.model
-                        do {
-                            for try await ev in client.stream(turns: turns, model: model, baseURL: base, apiKey: key) {
-                                Self.apply(ev, to: &self.columns[idx])
+                        group.addTask { @MainActor in
+                            guard let prov = providers.first(where: { $0.id == col.providerID }) else {
+                                self.columns[idx].error = T("Provider unavailable", "Proveedor no disponible")
+                                self.columns[idx].isStreaming = false
+                                return
                             }
-                        } catch {
-                            self.columns[idx].error = error.localizedDescription
+                            let client = ProviderFactory.make(kind: prov.kind)
+                            let base = prov.baseURL, key = prov.apiKey, model = col.model
+                            let start = Date()
+                            var lastTick = Date.distantPast
+                            do {
+                                for try await ev in client.stream(turns: turns, model: model, baseURL: base, apiKey: key) {
+                                    Self.apply(ev, to: &self.columns[idx])
+                                    if case .delta = ev {
+                                        let now = Date()
+                                        if now.timeIntervalSince(lastTick) >= 0.25 {
+                                            lastTick = now
+                                            let toks = LiveSpeed.estimateTokens(self.columns[idx].text)
+                                            let speed = LiveSpeed.tps(tokens: toks, elapsed: now.timeIntervalSince(start))
+                                            self.columns[idx].liveTPS = speed > 0 ? speed : nil
+                                        }
+                                    }
+                                }
+                            } catch {
+                                self.columns[idx].error = error.localizedDescription
+                            }
+                            self.columns[idx].isStreaming = false
+                            self.columns[idx].liveTPS = nil
                         }
-                        self.columns[idx].isStreaming = false
                     }
                 }
+                for i in self.columns.indices { self.columns[i].history.append(self.columns[i].text) }
             }
             self.isRunning = false
         }

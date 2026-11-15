@@ -310,6 +310,7 @@ struct ChatView: View {
         if args.contains("-demoCanvasPreview") { demoCanvasPreview(); return }
         if args.contains("-demoMermaid") { demoMermaid(); return }
         if args.contains("-demoCompare") { demoCompare(); return }
+        if args.contains("-demoDebate") { demoDebate(); return }
         if args.contains("-demoVoice") { demoVoice(); return }
         if args.contains("-demoImageEdit") { demoImageEdit(); return }
         if args.contains("-demoResearch") { demoResearch(); return }
@@ -1165,6 +1166,26 @@ struct ChatView: View {
             b.completionTokens = 38
             compare.columns = [a, b]
             compare.prompt = "¿Cuál es la capital de Francia?"
+            showCompare = true
+        }
+    }
+
+    /// DEMO offline: abre el comparador en modo Debate (2 rondas) con historial (sin red).
+    private func demoDebate() {
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            var a = ModelCompare.Column(providerID: "casa", model: "swift-iq3_s", label: "Casa")
+            a.history = ["París es la capital de Francia."]
+            a.text = "Coincido con Qwen: **París**. Añadiría que es también su centro económico."
+            a.completionTokens = 40
+            var b = ModelCompare.Column(providerID: "qwen", model: "qwen-max", label: "Qwen")
+            b.history = ["La capital de Francia es París."]
+            b.text = "Correcto, **París**. Matizo lo de Casa: el peso económico está compartido con otras ciudades."
+            b.completionTokens = 45
+            compare.columns = [a, b]
+            compare.prompt = "¿Cuál es la capital de Francia?"
+            compare.debateRounds = 2
+            compare.round = 2
             showCompare = true
         }
     }

@@ -38,10 +38,25 @@ struct CompareView: View {
                 .padding(12)
                 .background(OP.composerBg)
                 .clipShape(RoundedRectangle(cornerRadius: 14))
+            HStack {
+                Text(T("Rounds", "Rondas")).font(.caption).foregroundStyle(OP.textSecondary)
+                Spacer()
+                Picker("", selection: $compare.debateRounds) {
+                    ForEach(1...4, id: \.self) { n in
+                        Text(n == 1 ? T("Compare", "Comparar") : "\(n) · " + T("Debate", "Debate")).tag(n)
+                    }
+                }
+                .pickerStyle(.menu)
+                .labelsHidden()
+            }
+            if compare.debateRounds > 1 && compare.isRunning {
+                Text(T("Round \(compare.round) of \(compare.debateRounds)", "Ronda \(compare.round) de \(compare.debateRounds)"))
+                    .font(.caption2.weight(.semibold)).foregroundStyle(.orange)
+            }
             Button { compare.run(providers: providers) } label: {
                 HStack(spacing: 6) {
-                    Image(systemName: "rectangle.split.2x2")
-                    Text(compare.isRunning ? T("Running…", "Ejecutando…") : T("Compare", "Comparar"))
+                    Image(systemName: compare.debateRounds > 1 ? "bubble.left.and.bubble.right" : "rectangle.split.2x2")
+                    Text(compare.isRunning ? T("Running…", "Ejecutando…") : (compare.debateRounds > 1 ? T("Debate", "Debatir") : T("Compare", "Comparar")))
                 }
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(OP.sendFg)
@@ -86,9 +101,27 @@ struct CompareView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
+            if col.wrappedValue.isStreaming, let tps = col.wrappedValue.liveTPS {
+                Text(LiveSpeed.label(tps))
+                    .font(.caption2.monospacedDigit().weight(.semibold))
+                    .foregroundStyle(.orange)
+                    .accessibilityLabel(LiveSpeed.label(tps))
+            }
             if col.wrappedValue.completionTokens > 0 {
                 Text("≈ \(col.wrappedValue.completionTokens) tokens")
                     .font(.caption2).foregroundStyle(OP.textTertiary)
+            }
+            let priorRounds = col.wrappedValue.isStreaming ? col.wrappedValue.history : Array(col.wrappedValue.history.dropLast())
+            if !priorRounds.isEmpty {
+                DisclosureGroup(T("Previous rounds", "Rondas anteriores")) {
+                    ForEach(Array(priorRounds.enumerated()), id: \.offset) { i, txt in
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(T("Round \(i + 1)", "Ronda \(i + 1)")).font(.caption2.bold()).foregroundStyle(OP.textSecondary)
+                            MarkdownView(text: txt)
+                        }
+                    }
+                }
+                .font(.caption)
             }
         }
         .frame(width: 300, alignment: .topLeading)
