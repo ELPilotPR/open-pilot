@@ -13,6 +13,7 @@ struct RootView: View {
     @State private var showSettings = false
     @State private var demoProvider: ProviderConfig?
     @State private var demoMemory = false
+    @State private var demoUsage = false
     @AppStorage("appearanceMode") private var appearanceMode = "auto"
     @Environment(\.scenePhase) private var scenePhase
 
@@ -47,7 +48,10 @@ struct RootView: View {
         .sheet(isPresented: $demoMemory) {
             NavigationStack { MemoryView() }
         }
-        .task { purgeTemporary(); seedIfNeeded(); demoSidebarIfNeeded(); demoModelsIfNeeded(); demoProjectsIfNeeded(); demoMemoryIfNeeded(); demoShareIfNeeded(); demoOnDeviceIfNeeded(); consumePendingShare(); consumeIntentFlags() }
+        .sheet(isPresented: $demoUsage) {
+            NavigationStack { UsageDashboardView() }
+        }
+        .task { purgeTemporary(); seedIfNeeded(); demoSidebarIfNeeded(); demoModelsIfNeeded(); demoProjectsIfNeeded(); demoMemoryIfNeeded(); demoShareIfNeeded(); demoOnDeviceIfNeeded(); demoUsageIfNeeded(); consumePendingShare(); consumeIntentFlags() }
         .onChange(of: scenePhase) { _, phase in if phase == .active { consumePendingShare(); consumeIntentFlags() } }
         .onChange(of: current?.id) { oldID, newID in
             guard let oldID, oldID != newID else { return }
@@ -179,6 +183,31 @@ struct RootView: View {
         context.insert(c1); context.insert(c2); context.insert(c3)
         try? context.save()
         withAnimation(.easeInOut(duration: 0.25)) { sidebarOpen = true }
+    }
+
+    /// Demo offline del dashboard de uso: siembra respuestas con tokens y lo abre.
+    private func demoUsageIfNeeded() {
+        guard CommandLine.arguments.contains("-demoUsage") else { return }
+        let cloud = ProviderConfig(id: "demo-openai", name: "OpenAI", kind: "openai",
+                                   baseURL: "https://api.openai.com/v1", models: ["gpt-4o", "gpt-4o-mini"])
+        let local = ProviderConfig(id: "demo-ollama", name: "Ollama (LAN)", kind: "openai",
+                                   baseURL: "http://192.168.1.50:11434/v1", models: ["llama3"])
+        context.insert(cloud); context.insert(local)
+        func chat(_ prov: String, _ model: String, _ title: String, days: [(Int, Int, Int)]) {
+            let c = Conversation(title: title, providerID: prov, model: model)
+            for (offset, pr, comp) in days {
+                let m = Message(role: "assistant", text: "Respuesta de ejemplo")
+                m.promptTokens = pr; m.completionTokens = comp
+                m.createdAt = Date().addingTimeInterval(-86400 * Double(offset))
+                m.conversation = c; c.messages.append(m)
+            }
+            c.ensureTree(); context.insert(c)
+        }
+        chat("demo-openai", "gpt-4o", "Investigación", days: [(0, 4200, 1800), (1, 3100, 900), (3, 5200, 2400), (6, 1500, 600)])
+        chat("demo-openai", "gpt-4o-mini", "Notas rápidas", days: [(0, 800, 300), (2, 1200, 450), (5, 600, 200)])
+        chat("demo-ollama", "llama3", "Local privado", days: [(0, 3000, 1500), (4, 2200, 1100)])
+        try? context.save()
+        demoUsage = true
     }
 
     /// Demo offline de la memoria: siembra hechos y abre la vista de Memoria.
