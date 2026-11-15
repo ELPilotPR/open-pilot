@@ -14,6 +14,8 @@ struct ChatView: View {
     @Query private var providers: [ProviderConfig]
     @StateObject private var vm = ChatViewModel()
     @State private var input = ""
+    @State private var pendingXSuccess: String?
+    @State private var pendingXError: String?
     @State private var library = PromptLibrary.shared
     @State private var showPromptLibrary = false
     @State private var browse = false
@@ -148,8 +150,9 @@ struct ChatView: View {
             composer
         }
         .background(OP.canvas.ignoresSafeArea())
-        .onAppear { runDemoIfNeeded(); consumeVoiceIntent() }
-        .onChange(of: scenePhase) { _, p in if p == .active { consumeVoiceIntent() } }
+        .onAppear { runDemoIfNeeded(); consumeVoiceIntent(); consumeAskDeepLink() }
+        .onChange(of: scenePhase) { _, p in if p == .active { consumeVoiceIntent(); consumeAskDeepLink() } }
+        .onChange(of: vm.isStreaming) { old, new in if old && !new { fireDeepLinkCallback() } }
         .sheet(isPresented: $showPromptLibrary) { NavigationStack { PromptLibraryView() } }
         .animation(.easeInOut(duration: 0.2), value: vm.statusText == nil)
         .onChange(of: imageMode) { _, on in if on { probeIfNeeded() } }
@@ -238,6 +241,35 @@ struct ChatView: View {
         guard d.bool(forKey: IntentSupport.voiceFlag) else { return }
         d.removeObject(forKey: IntentSupport.voiceFlag)
         if !live.isActive { live.start() }
+    }
+
+    /// Deep link openpilot://ask?text=…: abre un chat nuevo y envía la pregunta.
+    private func consumeAskDeepLink() {
+        let d = UserDefaults.standard
+        guard let text = d.string(forKey: DeepLinkSupport.askTextFlag), !text.isEmpty else { return }
+        d.removeObject(forKey: DeepLinkSupport.askTextFlag)
+        pendingXSuccess = d.string(forKey: DeepLinkSupport.xSuccessKey)
+        pendingXError = d.string(forKey: DeepLinkSupport.xErrorKey)
+        d.removeObject(forKey: DeepLinkSupport.xSuccessKey)
+        d.removeObject(forKey: DeepLinkSupport.xErrorKey)
+        current = nil
+        input = text
+        send()
+    }
+
+    /// x-callback-url: al terminar el streaming devuelve la respuesta (o el error)
+    /// a la app que abrió el deep link.
+    private func fireDeepLinkCallback() {
+        if let err = vm.errorText, !err.isEmpty, let base = pendingXError {
+            if let url = URLRouter.callback(base, param: "error", value: err) { UIApplication.shared.open(url) }
+            pendingXSuccess = nil; pendingXError = nil
+            return
+        }
+        if let base = pendingXSuccess {
+            let reply = messages.last(where: { $0.role == "assistant" })?.text ?? ""
+            if let url = URLRouter.callback(base, param: "text", value: reply) { UIApplication.shared.open(url) }
+            pendingXSuccess = nil; pendingXError = nil
+        }
     }
 
     private func runDemoIfNeeded() {

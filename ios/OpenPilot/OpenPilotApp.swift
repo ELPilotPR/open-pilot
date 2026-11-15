@@ -16,7 +16,7 @@ struct OpenPilotApp: App {
     }
 
     var body: some Scene {
-        WindowGroup { RootView() }
+        WindowGroup { RootView().onOpenURL { url in DeepLinkSupport.route(url) } }
             .modelContainer(container)
     }
 }
