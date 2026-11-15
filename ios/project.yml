@@ -4,6 +4,10 @@ options:
   deploymentTarget:
     iOS: "18.0"
   createIntermediateGroups: true
+packages:
+  SwiftMath:
+    url: https://github.com/mgriebling/SwiftMath.git
+    branch: main
 settings:
   base:
     SWIFT_VERSION: "5.10"
@@ -17,6 +21,8 @@ targets:
     platform: iOS
     sources:
       - OpenPilot
+    dependencies:
+      - package: SwiftMath
     info:
       path: OpenPilot/Info.plist
       properties:

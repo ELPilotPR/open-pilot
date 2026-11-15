@@ -57,6 +57,7 @@ private enum PBlock {
     case table([[String]])
     case hr
     case para(String)
+    case math(String)
 }
 private struct LItem { var level: Int; var marker: String; var text: String }
 
@@ -88,12 +89,7 @@ private struct ProseView: View {
                             .font(.body)
                             .foregroundStyle(OP.textSecondary)
                             .frame(minWidth: 18, alignment: .trailing)
-                        Text(inline(it.text, sources: sources))
-                            .font(.body)
-                            .foregroundStyle(OP.textPrimary)
-                            .lineSpacing(3)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                        richText(it.text)
                     }
                     .padding(.leading, CGFloat(it.level) * 18)
                 }
@@ -114,14 +110,30 @@ private struct ProseView: View {
             MarkdownTableView(rows: rows, sources: sources)
         case .hr:
             Divider().padding(.vertical, 2)
+        case .math(let f):
+            MathImageView(latex: f, display: true, fontSize: 22)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.vertical, 4)
         case .para(let s):
+            richText(s)
+                .tint(OP.accent)
+        }
+    }
+
+    /// Texto enriquecido: MathText si hay fórmulas inline; si no, Text normal.
+    @ViewBuilder
+    private func richText(_ s: String, font: Font = .body) -> some View {
+        if containsMath(s) {
+            MathText(text: s, sources: sources)
+                .font(font)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        } else {
             Text(inline(s, sources: sources))
-                .font(.body)
+                .font(font)
                 .foregroundStyle(OP.textPrimary)
                 .lineSpacing(3)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .tint(OP.accent)
         }
     }
 }
@@ -142,6 +154,30 @@ private func parseProse(_ text: String) -> [PBlock] {
     while i < lines.count {
         let raw = lines[i]
         let t = raw.trimmingCharacters(in: .whitespaces)
+
+        // Matemáticas display: $$…$$ o \[…\] (una o varias líneas)
+        if t.hasPrefix("$$") || t.hasPrefix("\\[") {
+            flushAll()
+            let isDollar = t.hasPrefix("$$")
+            let open = isDollar ? "$$" : "\\["
+            let close = isDollar ? "$$" : "\\]"
+            let body = String(t.dropFirst(open.count))
+            if let r = body.range(of: close) {
+                let inner = String(body[..<r.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
+                out.append(.math(inner)); i += 1; continue
+            }
+            var acc = [body]
+            i += 1
+            while i < lines.count {
+                let lt = lines[i]
+                if let r = lt.range(of: close) {
+                    acc.append(String(lt[..<r.lowerBound])); i += 1; break
+                }
+                acc.append(lt); i += 1
+            }
+            out.append(.math(acc.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)))
+            continue
+        }
 
         // Tabla: linea con | seguida de separador ---
         if t.contains("|"), i + 1 < lines.count, isTableSep(lines[i + 1]) {

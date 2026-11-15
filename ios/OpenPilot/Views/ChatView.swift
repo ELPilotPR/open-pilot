@@ -215,6 +215,7 @@ struct ChatView: View {
         if args.contains("-demoLive") { demoLive(); return }
         if args.contains("-demoTemporary") { demoTemporary(); return }
         if args.contains("-demoSearch") { demoSearch(); return }
+        if args.contains("-demoMath") { demoMath(); return }
         if args.contains("-demoCI") {
             CustomInstructions.aboutYou = "Soy Javier, desarrollador en Wisconsin. Trabajo en iOS y crypto."
             CustomInstructions.responsePrefs = "Responde siempre en español, directo y con tablas cuando haya datos."
@@ -248,6 +249,36 @@ struct ChatView: View {
             let a = Message(role: "assistant", text: "La capital de Francia es **París**.")
             a.createdAt = now.addingTimeInterval(1); a.parentID = u.id
             a.completionTokens = 12; a.tokensPerSecond = 30
+            u.preferredChildID = a.id
+            for m in [u, a] { m.conversation = conv; conv.messages.append(m); context.insert(m) }
+            conv.activeLeafID = a.id
+            try? context.save()
+        }
+    }
+
+    /// Demo OFFLINE de matemáticas LaTeX: display ($$…$$) e inline ($…$) nativas.
+    private func demoMath() {
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            let conv = Conversation(title: "Demo matemáticas", providerID: activeProvider?.id ?? "casa", model: activeModel)
+            context.insert(conv); current = conv
+            let now = Date()
+            let u = Message(role: "user", text: "Explícame la fórmula cuadrática y la identidad de Euler")
+            u.createdAt = now; u.parentID = nil
+            let text = """
+            La **fórmula cuadrática** resuelve $ax^2 + bx + c = 0$:
+
+            $$x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$$
+
+            La identidad de Euler es $e^{i\\pi} + 1 = 0$, y una integral famosa:
+
+            $$\\int_{-\\infty}^{\\infty} e^{-x^2}\\,dx = \\sqrt{\\pi}$$
+
+            En línea: si $f(x) = x^2$, entonces $f'(x) = 2x$. El precio es $5 (no es fórmula).
+            """
+            let a = Message(role: "assistant", text: text)
+            a.createdAt = now.addingTimeInterval(1); a.parentID = u.id
+            a.completionTokens = 80; a.tokensPerSecond = 35
             u.preferredChildID = a.id
             for m in [u, a] { m.conversation = conv; conv.messages.append(m); context.insert(m) }
             conv.activeLeafID = a.id

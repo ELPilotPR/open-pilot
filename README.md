@@ -9,6 +9,7 @@
 - **Streaming chat** with any OpenAI-compatible endpoint (local LAN, cloud) or Anthropic, with a live typing cursor.
 - **Multiple providers & models** — add your own endpoint + key in Settings; switch per chat. A **model picker** offers capability presets (vision, reasoning) per provider, plus manual entry and model discovery.
 - **Rich markdown** — headings, bold/italic, nested lists, blockquotes, tables, and fenced code blocks with on-device syntax highlighting.
+- **Math (LaTeX)** — inline `$…$` and display `$$…$$` formulas (fractions, roots, integrals, Greek) typeset natively on-device — no webview, no server.
 - **Visible reasoning** — collapsible "thinking" trace for models that emit it.
 - **Web search with inline citations** — grounded answers with tappable source pills.
 - **Generative UI cards** — native weather and currency-conversion cards rendered from public, key-free APIs (Open-Meteo, Frankfurter/BCE).
@@ -25,7 +26,7 @@
 - **English / Español** — follows the device language, with a manual override.
 - **Appearance** — Automatic / Light / Dark.
 - **Local-first storage** via SwiftData; **API keys in the device Keychain**. No server in the middle.
-- **Tested** — an XCTest suite covers the version tree, model catalog, custom instructions, file parsing, citations, Canvas helpers, projects, memory, feedback, temporary chat, and in-conversation search.
+- **Tested** — an XCTest suite covers the version tree, model catalog, custom instructions, file parsing, citations, Canvas helpers, projects, memory, feedback, temporary chat, in-conversation search, and LaTeX parsing.
 
 ## Privacy
 
@@ -56,7 +57,7 @@ ios/            Native iOS app (SwiftUI + SwiftData)
 
 ## Roadmap
 
-- [x] iOS: streaming, markdown/tables + syntax highlighting, web citations, GenUI cards, images, voice, attachments
+- [x] iOS: streaming, markdown/tables + syntax highlighting, LaTeX math, web citations, GenUI cards, images, voice, attachments
 - [x] Reasoning/thoughts display
 - [x] Edit & resend with version branches, share/export, rename, conversation search
 - [x] i18n (EN/ES), Light/Dark appearance, Keychain-backed keys
