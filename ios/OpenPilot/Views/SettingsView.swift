@@ -174,6 +174,16 @@ struct SettingsView: View {
                     }
                 }
             }
+            Section {
+                NavigationLink {
+                    LocalModelsView()
+                } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(T("Local Models (GGUF)", "Modelos locales (GGUF)")).foregroundStyle(OP.textPrimary)
+                        Text(T("Download on-device models for the GGUF provider", "Descarga modelos on-device para el proveedor GGUF")).font(.caption).foregroundStyle(OP.textSecondary)
+                    }
+                }
+            }
 
             Section {
                 NavigationLink {

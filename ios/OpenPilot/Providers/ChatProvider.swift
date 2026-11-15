@@ -41,6 +41,7 @@ enum ProviderFactory {
         switch kind {
         case "anthropic": return AnthropicProvider()
         case "ondevice": return OnDeviceProvider()
+        case "gguf": return GGUFProvider()
         default: return OpenAICompatibleProvider()
         }
     }

@@ -30,3 +30,7 @@ providers.json
 *.secret
 _secrets/
 .env
+ios/Vendor/*
+!ios/Vendor/CLlama/
+ios/Vendor/CLlama/*
+!ios/Vendor/CLlama/Package.swift

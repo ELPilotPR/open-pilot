@@ -19,11 +19,18 @@ struct ProviderEditorView: View {
                     Text("OpenAI-compatible").tag("openai")
                     Text("Anthropic").tag("anthropic")
                     Text("On-device (Apple Intelligence)").tag("ondevice")
+                    Text("On-device (GGUF / llama.cpp)").tag("gguf")
                 }
                 if provider.kind == "ondevice" {
                     LabeledContent(T("Status", "Estado"), value: OnDeviceProvider.currentStatus())
                         .font(.callout)
                     Text(T("Runs Apple's on-device model (Apple Intelligence). No server, no API key, no model download. Requires a compatible device with iOS 26+.", "Ejecuta el modelo on-device de Apple (Apple Intelligence). Sin servidor, sin API key, sin descarga. Requiere un dispositivo compatible con iOS 26+."))
+                        .font(.caption).foregroundStyle(.secondary)
+                } else if provider.kind == "gguf" {
+                    NavigationLink { LocalModelsView() } label: {
+                        Label(T("Manage local models (GGUF)", "Gestionar modelos locales (GGUF)"), systemImage: "internaldrive")
+                    }
+                    Text(T("Runs a downloaded GGUF model on-device with llama.cpp. No server, no API key. Download a model first, then add its filename below (or use Test & discover).", "Ejecuta un modelo GGUF descargado en el dispositivo con llama.cpp. Sin servidor, sin API key. Descarga un modelo primero y añade su nombre de archivo abajo (o usa Probar y descubrir)."))
                         .font(.caption).foregroundStyle(.secondary)
                 } else {
                     TextField("Base URL", text: $provider.baseURL)
@@ -34,7 +41,7 @@ struct ProviderEditorView: View {
                 }
             }
 
-            if provider.kind != "ondevice" {
+            if provider.kind != "ondevice" && provider.kind != "gguf" {
                 Section {
                     Button { scanLocal() } label: {
                         if scanning {

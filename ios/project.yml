@@ -8,6 +8,8 @@ packages:
   SwiftMath:
     url: https://github.com/mgriebling/SwiftMath.git
     branch: main
+  CLlama:
+    path: Vendor/CLlama
 settings:
   base:
     SWIFT_VERSION: "5.10"
@@ -23,6 +25,9 @@ targets:
       - OpenPilot
     dependencies:
       - package: SwiftMath
+      - package: CLlama
+        products:
+          - CLlama
       - target: OpenPilotShare
       - target: OpenPilotWidget
       - sdk: ActivityKit.framework

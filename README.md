@@ -18,6 +18,7 @@
 - **Share extension** — share text, links or images from any app straight into a new Open Pilot conversation (via a shared App Group, no backend).
 - **Siri & Shortcuts** — ask your model a question, start a new chat, or jump into live voice mode through App Intents (on-device, no backend).
 - **On-device model** — use Apple Intelligence's on-device model (FoundationModels) as a provider: no server, no API key, no model download. Requires a compatible device (iOS 26+); the provider editor shows live availability.
+- **Offline GGUF models** — run open GGUF models (Qwen, Llama, Gemma…) fully on-device with **llama.cpp**: no server, no API key, and no Apple Intelligence required. Download a model in **Settings → Local Models**, then choose the *On-device (GGUF)* provider. CPU inference; small quantized models recommended.
 - **Voice** — dictate messages with on-device speech recognition, read replies aloud with a **pickable device voice**, and a **live voice mode** for continuous hands-free conversation (listen → reply → listen) with **barge-in** (interrupt the assistant by speaking).
 - **Attachments** — photos from library or camera, plus **files** (PDF, documents, code) extracted into the model's context.
 - **Canvas** — a side editor for code or text you can revise by hand or ask the model to change, with navigable versions. A **Code / Preview** toggle renders HTML & JavaScript in an on-device WebView and draws **Mermaid** diagrams fully offline (bundled mermaid.js).
@@ -49,6 +50,7 @@ Requirements: macOS with **Xcode 16+** (iOS 18 SDK) and **[XcodeGen](https://git
 ```bash
 brew install xcodegen          # if you don't have it
 cd ios
+scripts/bootstrap-gguf.sh      # fetch the llama.cpp xcframework for offline GGUF (~178 MB)
 xcodegen generate              # creates OpenPilot.xcodeproj from project.yml
 open OpenPilot.xcodeproj
 ```
@@ -56,6 +58,8 @@ open OpenPilot.xcodeproj
 Then select your signing team and run on a simulator or device. On first launch, open **Settings → Providers**, add an endpoint (e.g. your local model or a cloud API) and paste your key. That's it.
 
 > The Xcode project is generated from `ios/project.yml`; it is intentionally not committed.
+>
+> The offline GGUF provider links the prebuilt `llama.xcframework` (gitignored, ~568 MB extracted). `scripts/bootstrap-gguf.sh` downloads and checksum-verifies it once; run it before `xcodegen generate`.
 
 ## Repository layout
 
