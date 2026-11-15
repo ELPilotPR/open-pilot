@@ -42,6 +42,8 @@ targets:
               - openpilot
         NSUserActivityTypes:
           - com.openpilot.app.chat
+        UIBackgroundModes:
+          - audio
         UILaunchScreen: {}
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false

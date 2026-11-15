@@ -2,6 +2,7 @@ import Foundation
 import AVFoundation
 import Speech
 import SwiftUI
+import MediaPlayer
 
 /// Voz 100% on-device (sin backend nuestro): dictado con Speech de Apple y
 /// lectura en voz alta con AVSpeechSynthesizer. Singleton compartido para que
@@ -22,10 +23,17 @@ final class VoiceManager: NSObject, ObservableObject, AVSpeechSynthesizerDelegat
     // Lectura en voz alta
     @Published var speakingID: UUID?
     private let synth = AVSpeechSynthesizer()
+    private let nowPlaying = NowPlayingController()
+    private var speakText = ""
+    private var speakDuration: TimeInterval = 0
 
     private override init() {
         super.init()
         synth.delegate = self
+        nowPlaying.onPlay = { [weak self] in Task { @MainActor in self?.synth.continueSpeaking() } }
+        nowPlaying.onPause = { [weak self] in Task { @MainActor in self?.synth.pauseSpeaking(at: .word) } }
+        nowPlaying.onStop = { [weak self] in Task { @MainActor in self?.stopSpeaking() } }
+        nowPlaying.configure()
     }
 
     // MARK: - Dictado
@@ -136,11 +144,17 @@ final class VoiceManager: NSObject, ObservableObject, AVSpeechSynthesizerDelegat
         utt.rate = AVSpeechUtteranceDefaultSpeechRate
         speakingID = id
         synth.speak(utt)
+        speakText = clean
+        speakDuration = NowPlayingSupport.estimatedDuration(clean)
+        nowPlaying.isPlaying = true
+        nowPlaying.update(text: clean, elapsed: 0, duration: speakDuration, rate: 1.0)
     }
 
     func stopSpeaking() {
         if synth.isSpeaking { synth.stopSpeaking(at: .immediate) }
         speakingID = nil
+        nowPlaying.isPlaying = false
+        nowPlaying.clear()
     }
 
     /// Quita markdown/citas para que la lectura suene natural.
@@ -154,9 +168,17 @@ final class VoiceManager: NSObject, ObservableObject, AVSpeechSynthesizerDelegat
     }
 
     nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
-        Task { @MainActor in self.speakingID = nil }
+        Task { @MainActor in self.speakingID = nil; self.nowPlaying.isPlaying = false; self.nowPlaying.clear() }
     }
     nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
-        Task { @MainActor in self.speakingID = nil }
+        Task { @MainActor in self.speakingID = nil; self.nowPlaying.isPlaying = false; self.nowPlaying.clear() }
+    }
+
+    nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, willSpeakRangeOfSpeechString range: NSRange, utterance: AVSpeechUtterance) {
+        Task { @MainActor in
+            let total = max(1, utterance.speechString.count)
+            let frac = Double(range.location + range.length) / Double(total)
+            self.nowPlaying.update(text: self.speakText, elapsed: frac * self.speakDuration, duration: self.speakDuration, rate: 1.0)
+        }
     }
 }
