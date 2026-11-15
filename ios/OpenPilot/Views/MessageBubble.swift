@@ -5,6 +5,7 @@ import UIKit
 struct MessageRow: View {
     let message: Message
     var isActive: Bool = false
+    var liveTPS: Double = 0
     var onRegenerate: (() -> Void)? = nil
     var onEdit: (() -> Void)? = nil
     var onVariation: (() -> Void)? = nil
@@ -93,7 +94,11 @@ struct MessageRow: View {
                     if !message.sources.isEmpty { sourcesView }
                     HStack(spacing: 12) {
                         versionNav
-                        if message.completionTokens > 0 { metricsView }
+                        if isActive && liveTPS > 0 {
+                            liveMetricsView
+                        } else if message.completionTokens > 0 {
+                            metricsView
+                        }
                         Spacer(minLength: 0)
                         if let onRegenerate { regenerateButton(onRegenerate) }
                         if !message.text.isEmpty && !isActive { speakButton }
@@ -205,6 +210,19 @@ struct MessageRow: View {
         }
         .font(.caption2)
         .foregroundStyle(OP.textTertiary)
+    }
+
+    /// Velocidad EN VIVO mientras el modelo genera (tok/s pulsante en azul).
+    private var liveMetricsView: some View {
+        HStack(spacing: 5) {
+            Image(systemName: "bolt.fill")
+                .symbolEffect(.pulse, options: .repeating, isActive: true)
+            Text(LiveSpeed.label(liveTPS))
+                .monospacedDigit()
+        }
+        .font(.caption2.weight(.medium))
+        .foregroundStyle(OP.accent)
+        .accessibilityLabel(T("Generating", "Generando") + ", " + LiveSpeed.label(liveTPS))
     }
 
     private func copyMessage() {

@@ -21,6 +21,8 @@ struct ChatView: View {
     @State private var browse = false
     @State private var imageMode = false
     @State private var atBottom = true
+    @State private var demoScrollNudge = 0
+    @State private var demoScrollTarget: UUID?
     @State private var attachedImage: Data?
     @State private var attachedFile: FileAttachment.Parsed?
     @State private var showFilePicker = false
@@ -304,6 +306,7 @@ struct ChatView: View {
         if args.contains("-demoPrompts") { demoPrompts(); return }
         if args.contains("-demoCode") { demoCode(); return }
         if args.contains("-demoContext") { demoContext(); return }
+        if args.contains("-demoTelemetry") { demoTelemetry(); return }
         if args.contains("-demoCanvasPreview") { demoCanvasPreview(); return }
         if args.contains("-demoMermaid") { demoMermaid(); return }
         if args.contains("-demoCompare") { demoCompare(); return }
@@ -928,6 +931,7 @@ struct ChatView: View {
                         ForEach(Array(displayedMessages.enumerated()), id: \.element.id) { idx, m in
                             let sibs = current?.siblings(of: m) ?? [m]
                             MessageRow(message: m, isActive: vm.isStreaming && idx == messages.count - 1,
+                                       liveTPS: vm.liveTPS,
                                        onRegenerate: (!vm.isStreaming && !showSearch && m.role == "assistant" && idx == messages.count - 1) ? { regenerate() } : nil,
                                        onEdit: (!vm.isStreaming && !showSearch && m.role == "user") ? { startEdit(m) } : nil,
                                        onVariation: (!vm.isStreaming && m.role == "assistant" && !m.imageData.isEmpty) ? {
@@ -957,6 +961,11 @@ struct ChatView: View {
                 .onChange(of: messages.count) { _, _ in
                     atBottom = true
                     withAnimation(.easeOut(duration: 0.25)) { proxy.scrollTo("bottom", anchor: .bottom) }
+                }
+                .onChange(of: demoScrollNudge) { _, _ in
+                    atBottom = true
+                    let target: AnyHashable = demoScrollTarget.map { AnyHashable($0) } ?? AnyHashable("bottom")
+                    withAnimation(.easeOut(duration: 0.25)) { proxy.scrollTo(target, anchor: .bottom) }
                 }
                 .onAppear { proxy.scrollTo("bottom", anchor: .bottom) }
 
@@ -1043,6 +1052,45 @@ struct ChatView: View {
             }
             conv.activeLeafID = prev
             try? context.save()
+        }
+    }
+
+    /// Demo OFFLINE de telemetría: gauge de contexto + velocidad EN VIVO (sin red).
+    private func demoTelemetry() {
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            let conv = Conversation(title: "Demo telemetría", providerID: activeProvider?.id ?? "casa", model: activeModel)
+            context.insert(conv); current = conv
+            let now = Date()
+            var prev: UUID?
+            let body = String(repeating: "La inteligencia artificial transforma la industria y la sociedad. ", count: 20)
+            for i in 0..<6 {
+                let role = i % 2 == 0 ? "user" : "assistant"
+                let m = Message(role: role, text: "[\(i + 1)] \(body)")
+                m.createdAt = now.addingTimeInterval(Double(i))
+                m.parentID = prev
+                if let p = prev, let parent = conv.messages.first(where: { $0.id == p }) { parent.preferredChildID = m.id }
+                if role == "assistant" { m.promptTokens = 1400; m.completionTokens = 320; m.tokensPerSecond = 38.5 }
+                m.conversation = conv; conv.messages.append(m); context.insert(m)
+                prev = m.id
+            }
+            let u = Message(role: "user", text: "¿Y la velocidad en vivo?")
+            u.parentID = prev
+            if let p = prev, let parent = conv.messages.first(where: { $0.id == p }) { parent.preferredChildID = u.id }
+            u.conversation = conv; conv.messages.append(u); context.insert(u)
+            let a = Message(role: "assistant", text: "Generando una respuesta en tiempo real para mostrar los tok/s en vivo…")
+            a.parentID = u.id; u.preferredChildID = a.id
+            a.conversation = conv; conv.messages.append(a); context.insert(a)
+            conv.activeLeafID = a.id
+            try? context.save()
+            vm.isStreaming = true
+            vm.liveTPS = 42.5
+            // Baja al último mensaje tras el layout (nudges repetidos para celdas perezosas).
+            demoScrollTarget = a.id
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+            demoScrollNudge += 1
+            try? await Task.sleep(nanoseconds: 1_200_000_000)
+            demoScrollNudge += 1
         }
     }
 
@@ -1143,22 +1191,41 @@ struct ChatView: View {
         }
     }
 
-    /// Subtle context-size indicator above the composer; turns orange near the budget.
+    /// Gauge de contexto por chat: tokens usados / ventana del modelo, con % y barra
+    /// de color (verde→naranja→rojo). La auto-compacción sigue marcándose aparte.
     private var contextBar: some View {
+        let window = ModelContextWindow.window(for: current?.model ?? activeModel,
+                                               kind: activeProvider?.kind ?? "openai")
+        let gauge = ContextGauge.make(used: contextTokens, window: window)
         let budget = ContextSettings.budgetTokens
         let over = ContextSettings.autoCompact && contextTokens > budget
-        return HStack(spacing: 5) {
-            Image(systemName: "text.alignleft").font(.system(size: 10))
-            Text("≈ \(contextTokens) tokens")
-                .font(.caption2.monospacedDigit())
-            if over {
-                Text(T("· auto-compact on", "· auto-compacción activa"))
-                    .font(.caption2)
+        let color: Color = gauge.tier == 2 ? .red : (gauge.tier == 1 ? .orange : OP.accent)
+        return VStack(alignment: .leading, spacing: 3) {
+            HStack(spacing: 6) {
+                Image(systemName: "cpu").font(.system(size: 10))
+                Text("\(TokenFormat.short(contextTokens)) / \(TokenFormat.short(window))")
+                    .font(.caption2.monospacedDigit())
+                Text("· \(gauge.percent)%")
+                    .font(.caption2.monospacedDigit())
+                if over {
+                    Text(T("· auto-compact", "· auto-compacción"))
+                        .font(.caption2)
+                }
+                Spacer(minLength: 0)
             }
-            Spacer(minLength: 0)
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(OP.textTertiary.opacity(0.18))
+                    Capsule().fill(color)
+                        .frame(width: max(2, geo.size.width * gauge.fraction))
+                }
+            }
+            .frame(height: 3)
         }
-        .foregroundStyle(over ? Color.orange : OP.textTertiary)
+        .foregroundStyle(over ? Color.orange : OP.textSecondary)
         .padding(.horizontal, 16)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(T("Context", "Contexto") + ": \(gauge.percent)% " + T("used", "usado"))
     }
 
     private var composer: some View {

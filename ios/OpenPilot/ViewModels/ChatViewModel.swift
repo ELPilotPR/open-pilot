@@ -14,6 +14,8 @@ final class ChatViewModel: ObservableObject {
     @Published var isStreaming = false
     @Published var statusText: String?
     @Published var errorText: String?
+    /// Velocidad de generación EN VIVO (tok/s) mientras llega el streaming.
+    @Published var liveTPS: Double = 0
     private var task: Task<Void, Never>?
 
     func send(_ text: String, conversation: Conversation, provider: ProviderConfig,
@@ -143,16 +145,27 @@ final class ChatViewModel: ObservableObject {
                 let stream = prov.stream(turns: turns, model: model, baseURL: baseURL, apiKey: apiKey)
                 LiveActivityController.shared.start(title: conversation.title)
                 let genStart = Date()
+                var lastLive = genStart
                 var usagePrompt = 0, usageCompletion = 0
+                self.liveTPS = 0
                 for try await ev in stream {
                     if Task.isCancelled { break }
                     switch ev {
-                    case .delta(let t): assistant.text += t; LiveActivityController.shared.update(snippet: assistant.text)
+                    case .delta(let t):
+                        assistant.text += t
+                        LiveActivityController.shared.update(snippet: assistant.text)
+                        let now = Date()
+                        if now.timeIntervalSince(lastLive) >= 0.25 {
+                            lastLive = now
+                            let tok = usageCompletion > 0 ? usageCompletion : LiveSpeed.estimateTokens(assistant.text)
+                            self.liveTPS = LiveSpeed.tps(tokens: tok, elapsed: now.timeIntervalSince(genStart))
+                        }
                     case .reasoning(let r): assistant.reasoning += r
                     case .usage(let p, let c): usagePrompt = p; usageCompletion = c
                     case .done: break
                     }
                 }
+                self.liveTPS = 0
                 let elapsed = Date().timeIntervalSince(genStart)
                 let outTok = usageCompletion > 0 ? usageCompletion : max(1, assistant.text.count / 4)
                 let inTok = usagePrompt > 0 ? usagePrompt : max(1, turns.reduce(0) { $0 + $1.content.count } / 4)
@@ -181,6 +194,7 @@ final class ChatViewModel: ObservableObject {
             }
             LiveActivityController.shared.end()
             self.statusText = nil
+            self.liveTPS = 0
             try? context.save()
             self.isStreaming = false
         }
@@ -206,16 +220,27 @@ final class ChatViewModel: ObservableObject {
             do {
                 let stream = prov.stream(turns: turns, model: model, baseURL: cfg.baseURL, apiKey: cfg.apiKey)
                 let genStart = Date()
+                var lastLive = genStart
                 var usagePrompt = 0, usageCompletion = 0
+                self.liveTPS = 0
                 for try await ev in stream {
                     if Task.isCancelled { return false }
                     switch ev {
-                    case .delta(let t): assistant.text += t; LiveActivityController.shared.update(snippet: assistant.text)
+                    case .delta(let t):
+                        assistant.text += t
+                        LiveActivityController.shared.update(snippet: assistant.text)
+                        let now = Date()
+                        if now.timeIntervalSince(lastLive) >= 0.25 {
+                            lastLive = now
+                            let tok = usageCompletion > 0 ? usageCompletion : LiveSpeed.estimateTokens(assistant.text)
+                            self.liveTPS = LiveSpeed.tps(tokens: tok, elapsed: now.timeIntervalSince(genStart))
+                        }
                     case .reasoning(let r): assistant.reasoning += r
                     case .usage(let p, let c): usagePrompt = p; usageCompletion = c
                     case .done: break
                     }
                 }
+                self.liveTPS = 0
                 let elapsed = Date().timeIntervalSince(genStart)
                 let outTok = usageCompletion > 0 ? usageCompletion : max(1, assistant.text.count / 4)
                 let inTok = usagePrompt > 0 ? usagePrompt : max(1, turns.reduce(0) { $0 + $1.content.count } / 4)
