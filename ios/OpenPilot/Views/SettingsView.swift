@@ -128,6 +128,17 @@ struct SettingsView: View {
 
             Section {
                 NavigationLink {
+                    UsageDashboardView()
+                } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(T("Usage", "Uso")).foregroundStyle(OP.textPrimary)
+                        Text(T("Tokens and estimated cost per provider", "Tokens y coste estimado por proveedor")).font(.caption).foregroundStyle(OP.textSecondary)
+                    }
+                }
+            }
+
+            Section {
+                NavigationLink {
                     MemoryView()
                 } label: {
                     VStack(alignment: .leading, spacing: 2) {
