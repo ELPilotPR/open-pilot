@@ -19,10 +19,13 @@ struct SidebarView: View {
     @State private var showDeleteConfirm = false
     @State private var showArchived = false
     @State private var selectedProject: Project?
+    @AppStorage("selectedProviderID") private var selectedProviderID = "casa"
+    @AppStorage("selectedModel") private var selectedModel = "swift-iq3_s"
 
     private var filtered: [Conversation] {
-        guard !search.isEmpty else { return conversations }
-        return conversations.filter { c in
+        let base = conversations.filter { !$0.isTemporary }
+        guard !search.isEmpty else { return base }
+        return base.filter { c in
             c.title.localizedCaseInsensitiveContains(search)
                 || c.messages.contains { $0.text.localizedCaseInsensitiveContains(search) }
         }
@@ -69,6 +72,16 @@ struct SidebarView: View {
                     .frame(maxWidth: .infinity, alignment: .leading).padding(12)
                     .background(OP.elevated.opacity(0.5))
                     .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .buttonStyle(ScaleButtonStyle())
+            .padding(.horizontal, 12).padding(.bottom, 8)
+
+            Button { Haptic.light(); startTemporary() } label: {
+                Label(T("Temporary chat", "Chat temporal"), systemImage: "moon")
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(OP.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 12).padding(.vertical, 6)
             }
             .buttonStyle(ScaleButtonStyle())
             .padding(.horizontal, 12).padding(.bottom, 8)
@@ -251,6 +264,15 @@ struct SidebarView: View {
     }
 
     private func close() { withAnimation(.easeInOut(duration: 0.25)) { isOpen = false } }
+
+    /// Crea un chat temporal (sin memoria ni historial) y lo abre.
+    private func startTemporary() {
+        let c = Conversation(providerID: selectedProviderID, model: selectedModel)
+        c.isTemporary = true
+        context.insert(c); try? context.save()
+        current = c
+        close()
+    }
     private func delete(_ c: Conversation) {
         context.delete(c); try? context.save()
         if current?.id == c.id { current = nil }

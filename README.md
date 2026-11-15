@@ -18,12 +18,14 @@
 - **Canvas** — a side editor for code or text you can revise by hand or ask the model to change, with navigable versions.
 - **Edit & resend with versions** — editing a message keeps the original and lets you flip between branches (`< 1/2 >`); **share** a conversation as text; **rename** and search chats (by title or content).
 - **Custom instructions** — persistent "about you" and response preferences injected into every chat.
+- **Projects & automatic memory** — group chats into projects with their own instructions; the app remembers facts about you across chats (editable in Settings).
+- **Temporary chat** — a private mode that uses no memory and is never saved to history.
 - **Organize** — pin and archive conversations; the sidebar groups by date.
-- **Quality-of-life** — smart titles, regenerate, response-length control, tokens/sec + token counts, tap-anywhere to dismiss the keyboard.
+- **Quality-of-life** — smart titles, regenerate, 👍/👎 feedback on replies, search within a conversation, response-length control, tokens/sec + token counts, tap-anywhere to dismiss the keyboard.
 - **English / Español** — follows the device language, with a manual override.
 - **Appearance** — Automatic / Light / Dark.
 - **Local-first storage** via SwiftData; **API keys in the device Keychain**. No server in the middle.
-- **Tested** — an XCTest suite covers the version tree, model catalog, custom instructions, file parsing, citations, and Canvas helpers.
+- **Tested** — an XCTest suite covers the version tree, model catalog, custom instructions, file parsing, citations, Canvas helpers, projects, memory, feedback, temporary chat, and in-conversation search.
 
 ## Privacy
 
@@ -63,6 +65,7 @@ ios/            Native iOS app (SwiftUI + SwiftData)
 - [x] Canvas (model-assisted editor with versions)
 - [x] Live voice mode (hands-free)
 - [x] Automated XCTest suite
+- [x] Projects + automatic memory, 👍/👎 feedback, temporary chat, in-conversation search
 - [ ] On-device models (MLX / llama.cpp)
 - [ ] Windows / Android / desktop clients
 

@@ -30,6 +30,8 @@ struct ChatView: View {
     @State private var dictationPrefix = ""
     @State private var editingMessage: Message?
     @State private var editText = ""
+    @State private var showSearch = false
+    @State private var searchInChat = ""
     @FocusState private var composerFocused: Bool
     @AppStorage("selectedProviderID") private var selectedProviderID = "casa"
     @AppStorage("selectedModel") private var selectedModel = "swift-iq3_s"
@@ -41,6 +43,17 @@ struct ChatView: View {
     }
     private var activeModel: String { current?.model ?? selectedModel }
     private var messages: [Message] { current?.activeMessages ?? [] }
+    /// Mensajes visibles: si la búsqueda está activa, solo los que coinciden.
+    private var displayedMessages: [Message] {
+        guard showSearch else { return messages }
+        return Self.filterMessages(messages, query: searchInChat)
+    }
+    /// Filtro de búsqueda en la conversación (insensible a mayúsculas). Testeable.
+    static func filterMessages(_ messages: [Message], query: String) -> [Message] {
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !q.isEmpty else { return messages }
+        return messages.filter { $0.text.localizedCaseInsensitiveContains(q) }
+    }
     private var imagesAvailable: Bool {
         guard let p = activeProvider else { return false }
         switch p.imageCapability {
@@ -54,6 +67,12 @@ struct ChatView: View {
         VStack(spacing: 0) {
             topBar
             Divider().opacity(0.12)
+            if current?.isTemporary == true {
+                temporaryBanner
+            }
+            if showSearch {
+                searchBar
+            }
             if messages.isEmpty {
                 greeting
             } else {
@@ -194,6 +213,8 @@ struct ChatView: View {
         if args.contains("-demoFile") { demoFile(); return }
         if args.contains("-demoCanvas") { demoCanvas(); return }
         if args.contains("-demoLive") { demoLive(); return }
+        if args.contains("-demoTemporary") { demoTemporary(); return }
+        if args.contains("-demoSearch") { demoSearch(); return }
         if args.contains("-demoCI") {
             CustomInstructions.aboutYou = "Soy Javier, desarrollador en Wisconsin. Trabajo en iOS y crypto."
             CustomInstructions.responsePrefs = "Responde siempre en español, directo y con tablas cuando haya datos."
@@ -210,6 +231,53 @@ struct ChatView: View {
             try? await Task.sleep(nanoseconds: 700_000_000)
             browse = false; imageMode = false; input = prompt
             send()
+        }
+    }
+
+    /// Demo OFFLINE de chat temporal: conversación isTemporary con un intercambio;
+    /// verifica el banner superior (sin memoria ni historial).
+    private func demoTemporary() {
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            let conv = Conversation(title: "Chat temporal", providerID: activeProvider?.id ?? "casa", model: activeModel)
+            conv.isTemporary = true
+            context.insert(conv); current = conv
+            let now = Date()
+            let u = Message(role: "user", text: "¿Cuál es la capital de Francia?")
+            u.createdAt = now; u.parentID = nil
+            let a = Message(role: "assistant", text: "La capital de Francia es **París**.")
+            a.createdAt = now.addingTimeInterval(1); a.parentID = u.id
+            a.completionTokens = 12; a.tokensPerSecond = 30
+            u.preferredChildID = a.id
+            for m in [u, a] { m.conversation = conv; conv.messages.append(m); context.insert(m) }
+            conv.activeLeafID = a.id
+            try? context.save()
+        }
+    }
+
+    /// Demo OFFLINE de búsqueda en conversación: 4 mensajes (2 mencionan París);
+    /// abre la búsqueda con "parís" y muestra solo los coincidentes + contador.
+    private func demoSearch() {
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            let conv = Conversation(title: "Demo búsqueda", providerID: activeProvider?.id ?? "casa", model: activeModel)
+            context.insert(conv); current = conv
+            let now = Date()
+            let u1 = Message(role: "user", text: "Háblame de París")
+            let a1 = Message(role: "assistant", text: "París es la capital de Francia, la Ciudad de la Luz.")
+            let u2 = Message(role: "user", text: "¿Y qué tiempo hace en Madrid?")
+            let a2 = Message(role: "assistant", text: "Madrid tiene un clima continental seco.")
+            let chain = [u1, a1, u2, a2]
+            for (i, m) in chain.enumerated() {
+                m.createdAt = now.addingTimeInterval(Double(i))
+                m.parentID = i == 0 ? nil : chain[i - 1].id
+                m.conversation = conv; conv.messages.append(m); context.insert(m)
+            }
+            u1.preferredChildID = a1.id; a1.preferredChildID = u2.id; u2.preferredChildID = a2.id
+            conv.activeLeafID = a2.id
+            try? context.save()
+            showSearch = true
+            searchInChat = "parís"
         }
     }
 
@@ -539,6 +607,16 @@ struct ChatView: View {
                 }
                 .buttonStyle(ScaleButtonStyle())
                 Spacer()
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.2)) { showSearch.toggle() }
+                    if !showSearch { searchInChat = "" }
+                    Haptic.light()
+                }) {
+                    Image(systemName: "magnifyingglass").font(.system(size: 17, weight: .medium))
+                        .foregroundStyle(showSearch ? OP.accent : OP.textPrimary)
+                        .accessibilityLabel(T("Search in chat", "Buscar en la conversación"))
+                }
+                .buttonStyle(ScaleButtonStyle())
                 Button(action: { onNewChat(); Haptic.light() }) {
                     Image(systemName: "square.and.pencil").font(.system(size: 18, weight: .medium))
                         .accessibilityLabel(T("New chat", "Nueva conversación"))
@@ -581,6 +659,38 @@ struct ChatView: View {
         try? context.save()
     }
 
+    /// Aviso de chat temporal: sin memoria ni historial.
+    private var temporaryBanner: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "moon.fill").font(.system(size: 13)).foregroundStyle(OP.accent)
+            Text(T("Temporary chat — won't use memory or be saved to history",
+                   "Chat temporal: no usa memoria ni se guarda en el historial"))
+                .font(.caption).foregroundStyle(OP.textSecondary)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 16).padding(.vertical, 8)
+        .background(OP.accent.opacity(0.08))
+    }
+
+    /// Barra de búsqueda dentro de la conversación.
+    private var searchBar: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass").foregroundStyle(OP.textTertiary)
+            TextField(T("Search in this conversation", "Buscar en esta conversación"), text: $searchInChat)
+                .foregroundStyle(OP.textPrimary).tint(OP.accent)
+                .submitLabel(.search)
+            if !searchInChat.isEmpty {
+                Text("\(displayedMessages.count)")
+                    .font(.caption.monospacedDigit()).foregroundStyle(OP.textTertiary)
+                Button { searchInChat = "" } label: {
+                    Image(systemName: "xmark.circle.fill").foregroundStyle(OP.textTertiary)
+                }
+            }
+        }
+        .padding(10).background(OP.elevated).clipShape(RoundedRectangle(cornerRadius: 12))
+        .padding(.horizontal, 16).padding(.vertical, 8)
+    }
+
     // MARK: - Estado vacio
 
     private var greeting: some View {
@@ -608,11 +718,16 @@ struct ChatView: View {
             ZStack(alignment: .bottomTrailing) {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 24) {
-                        ForEach(Array(messages.enumerated()), id: \.element.id) { idx, m in
+                        if showSearch && displayedMessages.isEmpty {
+                            Text(T("No matches in this conversation", "Sin coincidencias en esta conversación"))
+                                .font(.footnote).foregroundStyle(OP.textTertiary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        ForEach(Array(displayedMessages.enumerated()), id: \.element.id) { idx, m in
                             let sibs = current?.siblings(of: m) ?? [m]
                             MessageRow(message: m, isActive: vm.isStreaming && idx == messages.count - 1,
-                                       onRegenerate: (!vm.isStreaming && m.role == "assistant" && idx == messages.count - 1) ? { regenerate() } : nil,
-                                       onEdit: (!vm.isStreaming && m.role == "user") ? { startEdit(m) } : nil,
+                                       onRegenerate: (!vm.isStreaming && !showSearch && m.role == "assistant" && idx == messages.count - 1) ? { regenerate() } : nil,
+                                       onEdit: (!vm.isStreaming && !showSearch && m.role == "user") ? { startEdit(m) } : nil,
                                        versionCurrent: sibs.count > 1 ? m.version : 0,
                                        versionTotal: sibs.count > 1 ? sibs.count : 0,
                                        onSwitchVersion: { target in switchVersion(m, to: target) })

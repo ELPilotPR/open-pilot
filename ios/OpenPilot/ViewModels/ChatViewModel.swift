@@ -86,8 +86,10 @@ final class ChatViewModel: ObservableObject {
             var systemPrompt = ResponseStyle.current.systemPrompt
             let custom = CustomInstructions.systemPrompt
             if !custom.isEmpty { systemPrompt = custom + "\n\n" + systemPrompt }
-            let mem = MemoryStore.systemPrompt
-            if !mem.isEmpty { systemPrompt = mem + "\n\n" + systemPrompt }
+            if !conversation.isTemporary {
+                let mem = MemoryStore.systemPrompt
+                if !mem.isEmpty { systemPrompt = mem + "\n\n" + systemPrompt }
+            }
             if let pid = conversation.projectID {
                 let desc = FetchDescriptor<Project>(predicate: #Predicate { $0.id == pid })
                 if let proj = (try? context.fetch(desc))?.first, !proj.systemPrompt.isEmpty {
@@ -154,7 +156,7 @@ final class ChatViewModel: ObservableObject {
                 if isFirstTurn {
                     self.generateTitle(conversation: conversation, provider: provider, context: context, firstUser: userText)
                 }
-                if MemoryStore.enabled && !assistant.text.isEmpty {
+                if MemoryStore.enabled && !assistant.text.isEmpty && !conversation.isTemporary {
                     self.extractMemories(userText: userText, assistantText: assistant.text, provider: provider, conversation: conversation)
                 }
             } catch {

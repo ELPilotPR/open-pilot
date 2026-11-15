@@ -44,7 +44,23 @@ struct RootView: View {
         .sheet(isPresented: $demoMemory) {
             NavigationStack { MemoryView() }
         }
-        .task { seedIfNeeded(); demoSidebarIfNeeded(); demoModelsIfNeeded(); demoProjectsIfNeeded(); demoMemoryIfNeeded() }
+        .task { purgeTemporary(); seedIfNeeded(); demoSidebarIfNeeded(); demoModelsIfNeeded(); demoProjectsIfNeeded(); demoMemoryIfNeeded() }
+        .onChange(of: current?.id) { oldID, newID in
+            guard let oldID, oldID != newID else { return }
+            let desc = FetchDescriptor<Conversation>(predicate: #Predicate { $0.id == oldID })
+            if let old = (try? context.fetch(desc))?.first, old.isTemporary {
+                context.delete(old); try? context.save()
+            }
+        }
+    }
+
+    /// Los chats temporales no persisten: se borran al salir de ellos y al arrancar.
+    private func purgeTemporary() {
+        let desc = FetchDescriptor<Conversation>(predicate: #Predicate { $0.isTemporary })
+        if let temps = try? context.fetch(desc) {
+            for t in temps { context.delete(t) }
+            try? context.save()
+        }
     }
 
     /// Demo offline del editor de modelos con presets y capacidades (Qwen).
