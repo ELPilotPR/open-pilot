@@ -23,6 +23,12 @@ targets:
       - OpenPilot
     dependencies:
       - package: SwiftMath
+      - target: OpenPilotShare
+    entitlements:
+      path: OpenPilot/OpenPilot.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.openpilot.app
     info:
       path: OpenPilot/Info.plist
       properties:
@@ -52,6 +58,37 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         GENERATE_INFOPLIST_FILE: NO
+  OpenPilotShare:
+    type: app-extension
+    platform: iOS
+    sources:
+      - ShareExtension
+      - path: OpenPilot/Services/ShareInbox.swift
+    entitlements:
+      path: ShareExtension/ShareExtension.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.openpilot.app
+    info:
+      path: ShareExtension/Info.plist
+      properties:
+        CFBundleDisplayName: Open Pilot
+        CFBundleShortVersionString: "0.1.0"
+        CFBundleVersion: "1"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.share-services
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController
+          NSExtensionAttributes:
+            NSExtensionActivationSupportsText: true
+            NSExtensionActivationSupportsWebURLWithMaxCount: 1
+            NSExtensionActivationSupportsImageWithMaxCount: 1
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.openpilot.app.share
+        TARGETED_DEVICE_FAMILY: "1,2"
+        GENERATE_INFOPLIST_FILE: NO
+        SKIP_INSTALL: YES
+        APPLICATION_EXTENSION_API_ONLY: YES
   OpenPilotTests:
     type: bundle.unit-test
     platform: iOS
@@ -68,6 +105,7 @@ schemes:
     build:
       targets:
         OpenPilot: all
+        OpenPilotShare: all
     run:
       config: Debug
     test:

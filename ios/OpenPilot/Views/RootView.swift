@@ -13,6 +13,7 @@ struct RootView: View {
     @State private var demoProvider: ProviderConfig?
     @State private var demoMemory = false
     @AppStorage("appearanceMode") private var appearanceMode = "auto"
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         Group {
@@ -44,7 +45,8 @@ struct RootView: View {
         .sheet(isPresented: $demoMemory) {
             NavigationStack { MemoryView() }
         }
-        .task { purgeTemporary(); seedIfNeeded(); demoSidebarIfNeeded(); demoModelsIfNeeded(); demoProjectsIfNeeded(); demoMemoryIfNeeded() }
+        .task { purgeTemporary(); seedIfNeeded(); demoSidebarIfNeeded(); demoModelsIfNeeded(); demoProjectsIfNeeded(); demoMemoryIfNeeded(); demoShareIfNeeded(); consumePendingShare() }
+        .onChange(of: scenePhase) { _, phase in if phase == .active { consumePendingShare() } }
         .onChange(of: current?.id) { oldID, newID in
             guard let oldID, oldID != newID else { return }
             let desc = FetchDescriptor<Conversation>(predicate: #Predicate { $0.id == oldID })
@@ -86,6 +88,33 @@ struct RootView: View {
             for t in temps { context.delete(t) }
             try? context.save()
         }
+    }
+
+    /// Consume lo recibido por la Share Extension: crea una conversación con el
+    /// contenido compartido como primer mensaje del usuario.
+    private func consumePendingShare() {
+        guard let item = ShareInbox.take() else { return }
+        let p = providers.first
+        let c = Conversation(title: ShareInbox.title(for: item),
+                             providerID: p?.id ?? "casa", model: p?.models.first ?? "swift-iq3_s")
+        let m = Message(role: "user", text: ShareInbox.messageText(for: item))
+        if item.kind == .image { m.imageData = item.imageData }
+        m.conversation = c
+        c.messages.append(m)
+        c.ensureTree()
+        context.insert(c)
+        try? context.save()
+        current = c
+    }
+
+    /// Demo offline: siembra un share en el App Group y lo consume (sin extensión real).
+    private func demoShareIfNeeded() {
+        guard CommandLine.arguments.contains("-demoShare") else { return }
+        let item = SharedItem(kind: .url, text: "Artículo sobre energía solar",
+                              url: "https://example.org/solar", imageData: Data(),
+                              note: "Resume esto y dime si es fiable", date: Date())
+        ShareInbox.put(item)
+        consumePendingShare()
     }
 
     /// Demo offline del editor de modelos con presets y capacidades (Qwen).
