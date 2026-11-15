@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UniformTypeIdentifiers
 
 /// Sidebar: búsqueda, nuevo chat, historial agrupado por fecha
 /// (Hoy / Ayer / Ultimos 7 dias / Anteriores) y settings abajo.
@@ -19,6 +20,9 @@ struct SidebarView: View {
     @State private var showDeleteConfirm = false
     @State private var showArchived = false
     @State private var selectedProject: Project?
+    @State private var showImportPicker = false
+    @State private var importError: String?
+    @State private var showImportError = false
     @AppStorage("selectedProviderID") private var selectedProviderID = "casa"
     @AppStorage("selectedModel") private var selectedModel = "swift-iq3_s"
 
@@ -86,6 +90,16 @@ struct SidebarView: View {
             .buttonStyle(ScaleButtonStyle())
             .padding(.horizontal, 12).padding(.bottom, 8)
 
+            Button { Haptic.light(); showImportPicker = true } label: {
+                Label(T("Import chat", "Importar chat"), systemImage: "square.and.arrow.down")
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(OP.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 12).padding(.vertical, 6)
+            }
+            .buttonStyle(ScaleButtonStyle())
+            .padding(.horizontal, 12).padding(.bottom, 8)
+
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 2) {
                     if showArchived {
@@ -141,7 +155,15 @@ struct SidebarView: View {
         }
         .background(OP.sidebar.ignoresSafeArea())
         .sheet(item: $sharePayload) { payload in
-            ShareSheet(items: [payload.text])
+            ShareSheet(items: payload.items)
+        }
+        .fileImporter(isPresented: $showImportPicker, allowedContentTypes: [.json], allowsMultipleSelection: false) { result in
+            handleImport(result)
+        }
+        .alert(T("Import failed", "Importación fallida"), isPresented: $showImportError) {
+            Button(T("OK", "Aceptar"), role: .cancel) {}
+        } message: {
+            Text(importError ?? "")
         }
         .alert(T("Delete chat?", "¿Eliminar conversación?"), isPresented: $showDeleteConfirm, presenting: deletingConv) { c in
             Button(T("Delete", "Eliminar"), role: .destructive) { delete(c) }
@@ -194,8 +216,13 @@ struct SidebarView: View {
                 Label(conv.isArchived ? T("Unarchive", "Desarchivar") : T("Archive", "Archivar"),
                       systemImage: "archivebox")
             }
-            Button { share(conv) } label: {
-                Label(T("Share", "Compartir"), systemImage: "square.and.arrow.up")
+            Menu {
+                Button { share(conv) } label: { Label(T("Share as text", "Compartir como texto"), systemImage: "text.alignleft") }
+                Button { exportFile(conv, .markdown) } label: { Label("Markdown (.md)", systemImage: "doc.text") }
+                Button { exportFile(conv, .pdf) } label: { Label("PDF (.pdf)", systemImage: "doc.richtext") }
+                Button { exportFile(conv, .json) } label: { Label("JSON (.json)", systemImage: "curlybraces") }
+            } label: {
+                Label(T("Export", "Exportar"), systemImage: "square.and.arrow.up")
             }
             Button { startRename(conv) } label: {
                 Label(T("Rename", "Renombrar"), systemImage: "pencil")
@@ -279,8 +306,51 @@ struct SidebarView: View {
     }
 
     private func share(_ c: Conversation) {
-        sharePayload = SharePayload(text: exportText(c))
+        sharePayload = SharePayload(items: [exportText(c)])
         Haptic.light()
+    }
+
+    /// Exporta a un archivo temporal (Markdown/PDF/JSON) y abre el share sheet.
+    private func exportFile(_ c: Conversation, _ kind: ExportKind) {
+        do {
+            let data: Data
+            switch kind {
+            case .markdown: data = Data(ConversationExport.markdown(c).utf8)
+            case .json: data = try ConversationExport.jsonData(c)
+            case .pdf: data = ConversationExport.pdf(c)
+            }
+            let url = FileManager.default.temporaryDirectory
+                .appendingPathComponent(ConversationExport.fileName(c.title, ext: kind.ext))
+            try data.write(to: url, options: .atomic)
+            sharePayload = SharePayload(items: [url])
+            Haptic.light()
+        } catch {
+            importError = error.localizedDescription
+            showImportError = true
+        }
+    }
+
+    /// Importa una conversación desde un archivo JSON elegido por el usuario.
+    private func handleImport(_ result: Result<[URL], Error>) {
+        switch result {
+        case .success(let urls):
+            guard let url = urls.first else { return }
+            let ok = url.startAccessingSecurityScopedResource()
+            defer { if ok { url.stopAccessingSecurityScopedResource() } }
+            do {
+                let data = try Data(contentsOf: url)
+                let c = try ConversationExport.importJSON(data, into: context)
+                current = c
+                close()
+                Haptic.selection()
+            } catch {
+                importError = error.localizedDescription
+                showImportError = true
+            }
+        case .failure(let e):
+            importError = e.localizedDescription
+            showImportError = true
+        }
     }
 
     private func startRename(_ c: Conversation) {
@@ -316,7 +386,19 @@ struct SidebarView: View {
 /// Payload identifiable para presentar el share sheet sin carreras de estado.
 struct SharePayload: Identifiable {
     let id = UUID()
-    let text: String
+    let items: [Any]
+}
+
+/// Formato de exportación de una conversación.
+enum ExportKind {
+    case markdown, pdf, json
+    var ext: String {
+        switch self {
+        case .markdown: return "md"
+        case .pdf: return "pdf"
+        case .json: return "json"
+        }
+    }
 }
 
 /// Share sheet nativo (UIActivityViewController) para exportar conversaciones.

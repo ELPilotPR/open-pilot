@@ -17,7 +17,8 @@
 - **Voice** — dictate messages with on-device speech recognition, read replies aloud, and a **live voice mode** for continuous hands-free conversation (listen → reply → listen).
 - **Attachments** — photos from library or camera, plus **files** (PDF, documents, code) extracted into the model's context.
 - **Canvas** — a side editor for code or text you can revise by hand or ask the model to change, with navigable versions.
-- **Edit & resend with versions** — editing a message keeps the original and lets you flip between branches (`< 1/2 >`); **share** a conversation as text; **rename** and search chats (by title or content).
+- **Edit & resend with versions** — editing a message keeps the original and lets you flip between branches (`< 1/2 >`); **rename** and search chats (by title or content).
+- **Export & import** — export any chat as **Markdown**, **PDF**, or a faithful **JSON** backup (full version tree, reasoning, attachments); import a JSON backup to restore it. Everything stays on-device.
 - **Custom instructions** — persistent "about you" and response preferences injected into every chat.
 - **Projects & automatic memory** — group chats into projects with their own instructions; the app remembers facts about you across chats (editable in Settings).
 - **Temporary chat** — a private mode that uses no memory and is never saved to history.
@@ -26,7 +27,7 @@
 - **English / Español** — follows the device language, with a manual override.
 - **Appearance** — Automatic / Light / Dark.
 - **Local-first storage** via SwiftData; **API keys in the device Keychain**. No server in the middle.
-- **Tested** — an XCTest suite covers the version tree, model catalog, custom instructions, file parsing, citations, Canvas helpers, projects, memory, feedback, temporary chat, in-conversation search, and LaTeX parsing.
+- **Tested** — an XCTest suite covers the version tree, model catalog, custom instructions, file parsing, citations, Canvas helpers, projects, memory, feedback, temporary chat, in-conversation search, LaTeX parsing, and export/import round-trips.
 
 ## Privacy
 
@@ -59,7 +60,7 @@ ios/            Native iOS app (SwiftUI + SwiftData)
 
 - [x] iOS: streaming, markdown/tables + syntax highlighting, LaTeX math, web citations, GenUI cards, images, voice, attachments
 - [x] Reasoning/thoughts display
-- [x] Edit & resend with version branches, share/export, rename, conversation search
+- [x] Edit & resend with version branches, export (Markdown/PDF/JSON) & import, rename, conversation search
 - [x] i18n (EN/ES), Light/Dark appearance, Keychain-backed keys
 - [x] Model picker with capability presets
 - [x] Custom instructions, pin/archive, file attachments (PDF/docs/code)

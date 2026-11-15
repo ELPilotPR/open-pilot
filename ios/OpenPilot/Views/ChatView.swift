@@ -216,6 +216,7 @@ struct ChatView: View {
         if args.contains("-demoTemporary") { demoTemporary(); return }
         if args.contains("-demoSearch") { demoSearch(); return }
         if args.contains("-demoMath") { demoMath(); return }
+        if args.contains("-demoExport") { demoExport(); return }
         if args.contains("-demoCI") {
             CustomInstructions.aboutYou = "Soy Javier, desarrollador en Wisconsin. Trabajo en iOS y crypto."
             CustomInstructions.responsePrefs = "Responde siempre en español, directo y con tablas cuando haya datos."
@@ -283,6 +284,47 @@ struct ChatView: View {
             for m in [u, a] { m.conversation = conv; conv.messages.append(m); context.insert(m) }
             conv.activeLeafID = a.id
             try? context.save()
+        }
+    }
+
+    /// Demo OFFLINE de export: siembra una conversación y escribe Markdown/PDF/JSON
+    /// a Documents para verificación end-to-end (sin backend).
+    private func demoExport() {
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            let conv = Conversation(title: "Demo exportación", providerID: activeProvider?.id ?? "casa", model: activeModel)
+            context.insert(conv); current = conv
+            let now = Date()
+            let u = Message(role: "user", text: "Resume la relatividad especial")
+            u.createdAt = now
+            let text = """
+            La **relatividad especial** (Einstein, 1905) se basa en dos postulados:
+
+            1. Las leyes de la física son iguales en todos los marcos inerciales.
+            2. La velocidad de la luz $c$ es constante.
+
+            De ahí sale la equivalencia masa-energía:
+
+            $$E = mc^2$$
+
+            | Concepto | Símbolo |
+            | --- | --- |
+            | Energía | E |
+            | Masa | m |
+            """
+            let a = Message(role: "assistant", text: text, reasoning: "El usuario pide un resumen; doy postulados + fórmula + tabla.")
+            a.createdAt = now.addingTimeInterval(1); a.parentID = u.id
+            a.completionTokens = 120; a.tokensPerSecond = 40
+            u.preferredChildID = a.id
+            for m in [u, a] { m.conversation = conv; conv.messages.append(m); context.insert(m) }
+            conv.activeLeafID = a.id
+            try? context.save()
+            if let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+                try? Data(ConversationExport.markdown(conv).utf8).write(to: docs.appendingPathComponent("op-export-demo.md"))
+                try? ConversationExport.jsonData(conv).write(to: docs.appendingPathComponent("op-export-demo.json"))
+                try? ConversationExport.pdf(conv).write(to: docs.appendingPathComponent("op-export-demo.pdf"))
+                print("OP_EXPORT_DIR=\(docs.path)")
+            }
         }
     }
 
