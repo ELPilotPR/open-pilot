@@ -16,6 +16,7 @@ struct SidebarView: View {
     @State private var showRename = false
     @State private var deletingConv: Conversation?
     @State private var showDeleteConfirm = false
+    @State private var showArchived = false
 
     private var filtered: [Conversation] {
         guard !search.isEmpty else { return conversations }
@@ -25,6 +26,10 @@ struct SidebarView: View {
         }
     }
 
+    private var active: [Conversation] { filtered.filter { !$0.isArchived } }
+    private var archivedList: [Conversation] { filtered.filter { $0.isArchived } }
+    private var pinned: [Conversation] { active.filter { $0.isPinned } }
+
     private var sections: [(String, [Conversation])] {
         let cal = Calendar.current
         var hoy: [Conversation] = []
@@ -32,7 +37,7 @@ struct SidebarView: View {
         var semana: [Conversation] = []
         var antes: [Conversation] = []
         let weekAgo = cal.date(byAdding: .day, value: -7, to: Date()) ?? Date()
-        for c in filtered {
+        for c in active where !c.isPinned {
             if cal.isDateInToday(c.createdAt) { hoy.append(c) }
             else if cal.isDateInYesterday(c.createdAt) { ayer.append(c) }
             else if c.createdAt >= weekAgo { semana.append(c) }
@@ -68,22 +73,38 @@ struct SidebarView: View {
 
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 2) {
-                    if filtered.isEmpty {
-                        Text(search.isEmpty ? T("No conversations yet", "Aún no hay conversaciones") : T("No results", "Sin resultados"))
-                            .font(.footnote).foregroundStyle(OP.textTertiary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, 12).padding(.top, 16)
-                    }
-                    ForEach(sections, id: \.0) { title, convs in
-                        Text(title).font(.caption2.weight(.semibold)).foregroundStyle(OP.textTertiary)
-                            .padding(.horizontal, 12).padding(.top, 14).padding(.bottom, 4)
-                        ForEach(convs) { conv in
-                            convRow(conv)
+                    if showArchived {
+                        sectionHeader(T("Archived", "Archivadas"))
+                        if archivedList.isEmpty {
+                            emptyNote(T("No archived chats", "No hay chats archivados"))
+                        }
+                        ForEach(archivedList) { conv in convRow(conv) }
+                    } else {
+                        if active.isEmpty {
+                            emptyNote(search.isEmpty ? T("No conversations yet", "Aún no hay conversaciones") : T("No results", "Sin resultados"))
+                        }
+                        if !pinned.isEmpty {
+                            sectionHeader(T("Pinned", "Fijadas"))
+                            ForEach(pinned) { conv in convRow(conv) }
+                        }
+                        ForEach(sections, id: \.0) { title, convs in
+                            sectionHeader(title)
+                            ForEach(convs) { conv in convRow(conv) }
                         }
                     }
                 }
                 .padding(.horizontal, 8).padding(.bottom, 12)
             }
+
+            Button { Haptic.light(); withAnimation(.easeInOut(duration: 0.2)) { showArchived.toggle() } } label: {
+                Label(showArchived ? T("Back to chats", "Volver a los chats")
+                                   : T("Archived", "Archivadas") + (archivedList.isEmpty ? "" : " (\(archivedList.count))"),
+                      systemImage: showArchived ? "chevron.left" : "archivebox")
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(OP.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 14).padding(.vertical, 8)
+            }
+            .buttonStyle(.plain)
 
             Spacer()
             Divider().overlay(OP.border)
@@ -111,15 +132,29 @@ struct SidebarView: View {
 
     private func convRow(_ conv: Conversation) -> some View {
         Button { Haptic.selection(); current = conv; close() } label: {
-            Text(conv.title.isEmpty ? T("New chat", "Nueva conversación") : conv.title).lineLimit(1).font(.subheadline)
-                .foregroundStyle(OP.textPrimary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 12).padding(.vertical, 10)
-                .background(current?.id == conv.id ? OP.elevated : Color.clear)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
+            HStack(spacing: 6) {
+                if conv.isPinned {
+                    Image(systemName: "pin.fill").font(.caption2).foregroundStyle(OP.textTertiary)
+                }
+                Text(conv.title.isEmpty ? T("New chat", "Nueva conversación") : conv.title)
+                    .lineLimit(1).font(.subheadline).foregroundStyle(OP.textPrimary)
+                Spacer(minLength: 0)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 12).padding(.vertical, 10)
+            .background(current?.id == conv.id ? OP.elevated : Color.clear)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
         }
         .buttonStyle(.plain)
         .contextMenu {
+            Button { togglePin(conv) } label: {
+                Label(conv.isPinned ? T("Unpin", "Desfijar") : T("Pin", "Fijar"),
+                      systemImage: conv.isPinned ? "pin.slash" : "pin")
+            }
+            Button { toggleArchive(conv) } label: {
+                Label(conv.isArchived ? T("Unarchive", "Desarchivar") : T("Archive", "Archivar"),
+                      systemImage: "archivebox")
+            }
             Button { share(conv) } label: {
                 Label(T("Share", "Compartir"), systemImage: "square.and.arrow.up")
             }
@@ -130,6 +165,30 @@ struct SidebarView: View {
                 Label(T("Delete", "Eliminar"), systemImage: "trash")
             }
         }
+    }
+
+    private func sectionHeader(_ title: String) -> some View {
+        Text(title).font(.caption2.weight(.semibold)).foregroundStyle(OP.textTertiary)
+            .padding(.horizontal, 12).padding(.top, 14).padding(.bottom, 4)
+    }
+
+    private func emptyNote(_ text: String) -> some View {
+        Text(text).font(.footnote).foregroundStyle(OP.textTertiary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 12).padding(.top, 16)
+    }
+
+    private func togglePin(_ c: Conversation) {
+        c.isPinned.toggle()
+        if c.isPinned { c.isArchived = false }
+        try? context.save(); Haptic.light()
+    }
+
+    private func toggleArchive(_ c: Conversation) {
+        c.isArchived.toggle()
+        if c.isArchived { c.isPinned = false }
+        try? context.save(); Haptic.light()
+        if c.isArchived && current?.id == c.id { current = nil }
     }
 
     private func close() { withAnimation(.easeInOut(duration: 0.25)) { isOpen = false } }

@@ -12,6 +12,9 @@ final class Conversation {
     var model: String
     /// Hoja activa del árbol de versiones: la ruta raíz→hoja que se muestra.
     var activeLeafID: UUID?
+    /// Fijada arriba del sidebar (pin) y/o archivada (oculta de la lista principal).
+    var isPinned: Bool = false
+    var isArchived: Bool = false
     @Relationship(deleteRule: .cascade, inverse: \Message.conversation)
     var messages: [Message]
 

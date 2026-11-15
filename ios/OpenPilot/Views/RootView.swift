@@ -36,7 +36,26 @@ struct RootView: View {
         .sheet(isPresented: $showSettings) {
             NavigationStack { SettingsView() }
         }
-        .task { seedIfNeeded() }
+        .task { seedIfNeeded(); demoSidebarIfNeeded() }
+    }
+
+    /// Demo offline del sidebar con conversaciones fijadas y archivadas.
+    private func demoSidebarIfNeeded() {
+        guard CommandLine.arguments.contains("-demoSidebar") else { return }
+        let samples: [(String, Bool, Bool)] = [
+            ("Proyecto Open Pilot", true, false),
+            ("Ideas de diseño", true, false),
+            ("Consulta de clima", false, false),
+            ("Recetas de cocina", false, false),
+            ("Chat viejo archivado", false, true),
+        ]
+        for (title, pin, arch) in samples {
+            let c = Conversation(title: title, providerID: "casa", model: "swift-iq3_s")
+            c.isPinned = pin; c.isArchived = arch
+            context.insert(c)
+        }
+        try? context.save()
+        withAnimation(.easeInOut(duration: 0.25)) { sidebarOpen = true }
     }
 
     /// Auto = sigue al sistema; claro/oscuro = override explícito del usuario.
