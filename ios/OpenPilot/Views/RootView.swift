@@ -7,12 +7,55 @@ struct RootView: View {
     @Query private var providers: [ProviderConfig]
     @State private var current: Conversation?
     @State private var sidebarOpen = false
+    @Environment(\.horizontalSizeClass) private var hSize
+    @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var showSettings = false
     @State private var demoProvider: ProviderConfig?
     @State private var demoMemory = false
     @AppStorage("appearanceMode") private var appearanceMode = "auto"
 
     var body: some View {
+        Group {
+            if hSize == .regular {
+                // iPad / Mac: sidebar persistente + chat en columna de detalle.
+                NavigationSplitView(columnVisibility: $columnVisibility) {
+                    SidebarView(current: $current, isOpen: .constant(true),
+                                onSettings: { showSettings = true })
+                        .navigationSplitViewColumnWidth(min: 280, ideal: 320, max: 380)
+                } detail: {
+                    ChatView(
+                        current: $current,
+                        onMenu: { withAnimation { columnVisibility = columnVisibility == .all ? .detailOnly : .all } },
+                        onNewChat: { current = nil },
+                        onSettings: { showSettings = true }
+                    )
+                }
+            } else {
+                compactBody
+            }
+        }
+        .preferredColorScheme(resolvedColorScheme)
+        .sheet(isPresented: $showSettings) {
+            NavigationStack { SettingsView() }
+        }
+        .sheet(item: $demoProvider) { p in
+            NavigationStack { ProviderEditorView(provider: p) }
+        }
+        .sheet(isPresented: $demoMemory) {
+            NavigationStack { MemoryView() }
+        }
+        .task { purgeTemporary(); seedIfNeeded(); demoSidebarIfNeeded(); demoModelsIfNeeded(); demoProjectsIfNeeded(); demoMemoryIfNeeded() }
+        .onChange(of: current?.id) { oldID, newID in
+            guard let oldID, oldID != newID else { return }
+            let desc = FetchDescriptor<Conversation>(predicate: #Predicate { $0.id == oldID })
+            if let old = (try? context.fetch(desc))?.first, old.isTemporary {
+                context.delete(old); try? context.save()
+            }
+        }
+    }
+
+    /// iPhone: chat a pantalla completa + sidebar en drawer lateral.
+    private var compactBody: some View {
         ZStack(alignment: .leading) {
             ChatView(
                 current: $current,
@@ -32,24 +75,6 @@ struct RootView: View {
                 .frame(width: 300)
                 .frame(maxHeight: .infinity)
                 .transition(.move(edge: .leading))
-            }
-        }
-        .preferredColorScheme(resolvedColorScheme)
-        .sheet(isPresented: $showSettings) {
-            NavigationStack { SettingsView() }
-        }
-        .sheet(item: $demoProvider) { p in
-            NavigationStack { ProviderEditorView(provider: p) }
-        }
-        .sheet(isPresented: $demoMemory) {
-            NavigationStack { MemoryView() }
-        }
-        .task { purgeTemporary(); seedIfNeeded(); demoSidebarIfNeeded(); demoModelsIfNeeded(); demoProjectsIfNeeded(); demoMemoryIfNeeded() }
-        .onChange(of: current?.id) { oldID, newID in
-            guard let oldID, oldID != newID else { return }
-            let desc = FetchDescriptor<Conversation>(predicate: #Predicate { $0.id == oldID })
-            if let old = (try? context.fetch(desc))?.first, old.isTemporary {
-                context.delete(old); try? context.save()
             }
         }
     }

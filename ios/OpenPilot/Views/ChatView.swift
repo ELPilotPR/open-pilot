@@ -696,6 +696,7 @@ struct ChatView: View {
                         .accessibilityLabel(T("Menu", "Menú"))
                 }
                 .buttonStyle(ScaleButtonStyle())
+                .keyboardShortcut("b", modifiers: .command)
                 Spacer()
                 Button(action: {
                     withAnimation(.easeInOut(duration: 0.2)) { showSearch.toggle() }
@@ -707,11 +708,13 @@ struct ChatView: View {
                         .accessibilityLabel(T("Search in chat", "Buscar en la conversación"))
                 }
                 .buttonStyle(ScaleButtonStyle())
+                .keyboardShortcut("f", modifiers: .command)
                 Button(action: { onNewChat(); Haptic.light() }) {
                     Image(systemName: "square.and.pencil").font(.system(size: 18, weight: .medium))
                         .accessibilityLabel(T("New chat", "Nueva conversación"))
                 }
                 .buttonStyle(ScaleButtonStyle())
+                .keyboardShortcut("n", modifiers: .command)
             }
             .foregroundStyle(OP.textPrimary)
         }
@@ -730,6 +733,7 @@ struct ChatView: View {
             }
             Divider()
             Button(T("Model settings…", "Ajustes de modelos…"), action: onSettings)
+                .keyboardShortcut(",", modifiers: .command)
         } label: {
             HStack(spacing: 4) {
                 Text(activeModel).font(.headline).lineLimit(1)
@@ -1086,6 +1090,7 @@ struct ChatView: View {
                 }
                 .disabled(!canSend)
                 .buttonStyle(ScaleButtonStyle())
+                .keyboardShortcut(.return, modifiers: .command)
             }
         }
         .padding(.horizontal, 10).padding(.vertical, 7)

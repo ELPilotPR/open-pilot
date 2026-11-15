@@ -30,6 +30,7 @@
 - **Quality-of-life** — smart titles, regenerate, 👍/👎 feedback on replies, search within a conversation, response-length control, tokens/sec + token counts, tap-anywhere to dismiss the keyboard.
 - **English / Español** — follows the device language, with a manual override.
 - **Appearance** — Automatic / Light / Dark.
+- **iPad & Mac ready** — a persistent two-column split view on larger screens (a drawer on iPhone), plus keyboard shortcuts: ⌘N new chat, ⌘Return send, ⌘F search, ⌘B sidebar, ⌘, settings.
 - **Local-first storage** via SwiftData; **API keys in the device Keychain**. No server in the middle.
 - **Tested** — an XCTest suite covers the version tree, model catalog, custom instructions, file parsing, citations, Canvas helpers, projects, memory, feedback, temporary chat, in-conversation search, LaTeX parsing, export/import round-trips, prompt slash matching, JavaScript sandbox execution, CSV parsing, context compaction, Canvas preview document building, model-comparison column logic, and voice selection/barge-in logic.
 
@@ -71,6 +72,7 @@ ios/            Native iOS app (SwiftUI + SwiftData)
 - [x] Canvas (model-assisted editor with versions)
 - [x] Canvas live preview (HTML/JS WebView) + offline Mermaid diagrams
 - [x] Side-by-side multi-model comparison
+- [x] iPad/Mac split view + keyboard shortcuts
 - [x] Voice picker + barge-in (interrupt the assistant by speaking)
 - [x] Live voice mode (hands-free)
 - [x] Automated XCTest suite
