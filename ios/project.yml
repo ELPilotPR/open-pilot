@@ -45,6 +45,17 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         GENERATE_INFOPLIST_FILE: NO
+  OpenPilotTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - OpenPilotTests
+    dependencies:
+      - target: OpenPilot
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.openpilot.tests
+        GENERATE_INFOPLIST_FILE: YES
 schemes:
   OpenPilot:
     build:
@@ -52,5 +63,9 @@ schemes:
         OpenPilot: all
     run:
       config: Debug
+    test:
+      config: Debug
+      targets:
+        - OpenPilotTests
     archive:
       config: Release

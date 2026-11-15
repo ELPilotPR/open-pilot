@@ -32,7 +32,8 @@ enum FileAttachment {
             }
         }
         guard var t = text?.trimmingCharacters(in: .whitespacesAndNewlines), !t.isEmpty else { return nil }
-        if t.count > maxChars { t = String(t.prefix(maxChars)) + "\n…[contenido truncado]" }
+        let marker = "\n…[contenido truncado]"
+        if t.count > maxChars { t = String(t.prefix(maxChars - marker.count)) + marker }
         return Parsed(name: name, text: t)
     }
 }

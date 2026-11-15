@@ -81,8 +81,9 @@ enum WeatherService {
 
     static func isWeatherQuery(_ q: String) -> Bool {
         let s = q.lowercased()
-        let keys = ["clima", "weather", "temperatura", "lluvia", "llover", "llueva",
-                    "pronóstico", "pronostico", "forecast", "nevar", "nevada", "humedad"]
+        let keys = ["clima", "weather", "temperatura", "temperature", "lluvia", "llover", "llueva",
+                    "rain", "raining", "snow", "pronóstico", "pronostico", "forecast",
+                    "nevar", "nevada", "humedad", "humidity"]
         if keys.contains(where: { s.contains($0) }) { return true }
         // "tiempo" es ambiguo (clima / duración): solo si pinta a clima.
         if s.contains("tiempo") {
