@@ -74,7 +74,10 @@ final class ChatViewModel: ObservableObject {
         task = Task { [weak self] in
             guard let self else { return }
             var turns = history
-            turns.insert(ChatTurn(role: "system", content: ResponseStyle.current.systemPrompt), at: 0)
+            var systemPrompt = ResponseStyle.current.systemPrompt
+            let custom = CustomInstructions.systemPrompt
+            if !custom.isEmpty { systemPrompt = custom + "\n\n" + systemPrompt }
+            turns.insert(ChatTurn(role: "system", content: systemPrompt), at: 0)
             do {
                 if WeatherService.isWeatherQuery(userText) && !hasImage {
                     self.statusText = T("Checking the weather…", "Consultando el tiempo…")

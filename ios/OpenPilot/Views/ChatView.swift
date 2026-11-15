@@ -20,6 +20,7 @@ struct ChatView: View {
     @State private var photoItem: PhotosPickerItem?
     @State private var showCamera = false
     @State private var imageSupport: [String: Bool] = [:]
+    @State private var demoCI = false
     @State private var probingImage = false
     @ObservedObject private var voice = VoiceManager.shared
     @State private var dictationPrefix = ""
@@ -121,6 +122,9 @@ struct ChatView: View {
         .sheet(item: $editingMessage) { m in
             editSheet(m)
         }
+        .sheet(isPresented: $demoCI) {
+            NavigationStack { CustomInstructionsView() }
+        }
     }
 
     /// Hook de verificación visual (SOLO con argumento -demoWeather/-demoCurrency al
@@ -135,6 +139,13 @@ struct ChatView: View {
         if args.contains("-demoKeychain") { demoKeychain(); return }
         if args.contains("-demoError") { demoError(); return }
         if args.contains("-demoVersions") { demoVersions(startVersion: args.contains("-v1") ? 1 : 2); return }
+        if args.contains("-demoCI") {
+            CustomInstructions.aboutYou = "Soy Javier, desarrollador en Wisconsin. Trabajo en iOS y crypto."
+            CustomInstructions.responsePrefs = "Responde siempre en español, directo y con tablas cuando haya datos."
+            CustomInstructions.enabled = true
+            demoCI = true
+            return
+        }
         let prompt: String?
         if args.contains("-demoWeather") { prompt = "¿Cómo está el tiempo en Racine WI?" }
         else if args.contains("-demoCurrency") { prompt = "cuánto es 100 dólares en euros" }

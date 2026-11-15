@@ -8,6 +8,9 @@ struct SettingsView: View {
     @AppStorage("imageModel") private var imageModel = "dall-e-3"
     @AppStorage("responseStyle") private var responseStyle = "conciso"
     @AppStorage("appearanceMode") private var appearanceMode = "auto"
+    @AppStorage("customInstructionsEnabled") private var ciEnabled = true
+    @AppStorage("customAboutYou") private var ciAbout = ""
+    @AppStorage("customResponsePrefs") private var ciPrefs = ""
 
     var body: some View {
         List {
@@ -77,6 +80,23 @@ struct SettingsView: View {
             }
 
             Section {
+                NavigationLink {
+                    CustomInstructionsView()
+                } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(T("Custom instructions", "Instrucciones personalizadas"))
+                            .foregroundStyle(OP.textPrimary)
+                        Text(ciStatus).font(.caption).foregroundStyle(OP.textSecondary)
+                    }
+                }
+            } header: {
+                Text(T("Personalization", "Personalización"))
+            } footer: {
+                Text(T("Tell the model about you and how you want it to respond. Applies to every chat.",
+                       "Dile al modelo sobre ti y cómo quieres que responda. Se aplica a todos los chats."))
+            }
+
+            Section {
                 Button { addProvider() } label: {
                     Label(T("Add OpenAI-compatible API", "Agregar API OpenAI-compatible"), systemImage: "plus")
                 }
@@ -92,6 +112,13 @@ struct SettingsView: View {
                 Button(T("Done", "Listo")) { dismiss() }
             }
         }
+    }
+
+    private var ciStatus: String {
+        if !ciEnabled { return T("Off", "Desactivadas") }
+        let has = !ciAbout.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || !ciPrefs.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        return has ? T("On", "Activadas") : T("Not set", "Sin configurar")
     }
 
     private var langBinding: Binding<AppLang?> {
