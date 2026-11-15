@@ -184,10 +184,23 @@ struct MessageRow: View {
 
     private var reasoningView: some View {
         DisclosureGroup(isExpanded: $reasoningExpanded) {
-            Text(message.reasoning)
-                .font(.caption).foregroundStyle(OP.textSecondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.top, 4)
+            ScrollViewReader { proxy in
+                ScrollView(.vertical, showsIndicators: true) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(message.reasoning)
+                            .font(.caption).foregroundStyle(OP.textSecondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .textSelection(.enabled)
+                        Color.clear.frame(height: 1).id("reasoningEnd")
+                    }
+                    .padding(.top, 4)
+                }
+                .frame(maxHeight: 180)
+                .onChange(of: message.reasoning) { _, _ in
+                    if isThinking { proxy.scrollTo("reasoningEnd", anchor: .bottom) }
+                }
+                .onAppear { if isThinking { proxy.scrollTo("reasoningEnd", anchor: .bottom) } }
+            }
         } label: {
             HStack(spacing: 6) {
                 Image(systemName: "brain")
