@@ -27,17 +27,18 @@ Legend: ✅ already in Open Pilot · 🔜 high value, build next · ➕ nice-to-
 | Per-chat context gauge (used / model window, %) | ✅ | Shows how much context a chat costs; color tiers warn before overflow. |
 | Final tok/s + ↑in ↓out per message | ✅ | Honest per-answer cost. |
 | Web fetch → readable Markdown + depth guard + size cap | 🔜 | Cleaner browsing context, less junk fed to the model; pure client-side. |
-| Tap a citation → preview card | 🔜 | Fast source verification without leaving the chat. |
-| Live voice spectrum while recording | 🔜 | Feels alive; trivial with AVAudioEngine metering. |
-| Throttled Markdown render during streaming | 🔜 | Smooth scrolling on phone CPUs; avoids re-rendering every token. |
+| Tap a citation → preview card | ✅ | Fast source verification without leaving the chat. |
+| Live voice spectrum while recording | ✅ | Feels alive; AVAudioRecorder metering drives a bar spectrum. |
+| Throttled Markdown render during streaming | ✅ | Smooth scrolling on phone CPUs; debounced ~8 fps re-parse. |
 
 ## Tier 2 — nice-to-have
 
 | Feature | Status | Notes |
 |---|---|---|
-| Per-conversation drafts | ➕ | Resume half-typed messages; UserDefaults keyed by chat id. |
-| Reply / quote threading | ➕ | Quote a prior message into the composer. |
-| "Continue" a truncated answer | ➕ | One-tap continuation when output hits the cap. |
+| Per-conversation drafts | ✅ | Resume half-typed messages; UserDefaults keyed by chat id. |
+| Reply / quote threading | ✅ | Quote a prior message into the composer. |
+| "Continue" a truncated answer | ✅ | One-tap continuation when output hits the cap. |
+| Compact context now (with savings report) | ✅ | Manual fold of older turns; reports tokens saved before sending. |
 | Turn outline / jump-to-message | ➕ | Navigate long chats. |
 | Welcome / onboarding cards | ➕ | First-run guidance (no prompt-suggestion chips — removed by design). |
 | Personas / response-style registry | ➕ | Extend the existing ResponseStyle with named presets. |
