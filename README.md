@@ -1,49 +1,133 @@
+<div align="center">
+
+<img src="docs/screenshots/logo.png" width="140" alt="Open Pilot logo" />
+
 # Open Pilot
 
-**Open-source, privacy-first AI chat client.** Native, fast, and yours — no backend, no account, no telemetry. Open Pilot talks *directly* from your device to the model you choose: a local model on your network, any OpenAI-compatible cloud, or Anthropic. Everything (chats, settings, keys) stays on your device.
+**Private AI chat, your models.** A native, open-source iOS harness that talks *straight* from your iPhone to the model you choose — no backend, no account, no telemetry.
 
-> iOS first (SwiftUI). More platforms — Windows, Android, desktop — are on the roadmap. The repo is structured as a monorepo (`ios/`, …) so each platform can grow independently.
+[![Release](https://img.shields.io/github/v/release/ELPilotPR/open-pilot?label=release&color=2ea043)](https://github.com/ELPilotPR/open-pilot/releases/latest)
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-iOS%2018%2B-007aff)](https://developer.apple.com/ios/)
+[![Swift](https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white)](https://swift.org)
+[![SwiftUI](https://img.shields.io/badge/UI-SwiftUI-0071e3)](https://developer.apple.com/xcode/swiftui/)
+[![Tests](https://img.shields.io/badge/tests-477%20passing-2ea043)](ios/OpenPilotTests)
+[![Backend](https://img.shields.io/badge/backend-none-2ea043)](#privacy--security)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-blueviolet)](#contributing)
+
+[**Download IPA**](https://github.com/ELPilotPR/open-pilot/releases/latest) · [Features](#features) · [Screenshots](#screenshots) · [Build from source](#build-from-source) · [Privacy](#privacy--security)
+
+</div>
+
+---
+
+Open Pilot is a full-featured ChatGPT-class client rebuilt **clean-room in pure SwiftUI** — and then pushed further. It streams from any OpenAI-compatible endpoint (a local model on your LAN, or a cloud API), Anthropic, Apple's on-device model, or an offline GGUF running on llama.cpp. Every conversation, setting and key lives **on your device**. There is no server in the middle, nothing to sign up for, and nothing phoning home.
+
+What makes it more than a clone: **live tokens/sec**, a **context-window gauge** that auto-scales to your model (up to 512k+), a **reasoning panel with its own scroll**, **personas**, side-by-side **model comparison**, an on-device **code interpreter**, **Canvas** with live HTML/JS preview and offline Mermaid, **deep research**, and a genuinely private **temporary chat**.
+
+## Screenshots
+
+<div align="center">
+
+| | | |
+|:--:|:--:|:--:|
+| <img src="docs/screenshots/02-chat-math.png" width="230" alt="Native LaTeX math" /> | <img src="docs/screenshots/03-code.png" width="230" alt="Syntax-highlighted code" /> | <img src="docs/screenshots/04-context.png" width="230" alt="Live tokens and context gauge" /> |
+| **Native LaTeX math** | **Syntax-highlighted code** | **Live tok/s + context gauge** |
+| <img src="docs/screenshots/05-compare.png" width="230" alt="Model comparison" /> | <img src="docs/screenshots/06-citations.png" width="230" alt="Web citations" /> | <img src="docs/screenshots/08-reasoning.png" width="230" alt="Reasoning panel" /> |
+| **Side-by-side model comparison** | **Web search with citations** | **Visible reasoning trace** |
+| <img src="docs/screenshots/07-mermaid.png" width="230" alt="Offline Mermaid diagrams" /> | <img src="docs/screenshots/10-canvas.png" width="230" alt="Canvas live preview" /> | <img src="docs/screenshots/09-sidebar.png" width="230" alt="Organize: projects, pins, folders" /> |
+| **Offline Mermaid diagrams** | **Canvas live HTML/JS preview** | **Projects, pins & smart folders** |
+
+<img src="docs/screenshots/01-onboarding.png" width="230" alt="First-run welcome" />
+
+*A friendly first-run welcome — then straight to your models.*
+
+</div>
+
+## Why Open Pilot
+
+- 🔒 **Truly private.** No backend, no account, no analytics. Keys in the device **Keychain**, chats in on-device **SwiftData**. Requests go device → provider, full stop.
+- 🏠 **Your models, your rules.** Point it at a self-hosted model on your network (`http://192.168.x.x:8080/v1`), any OpenAI-compatible cloud, Anthropic, Apple Intelligence, or an offline GGUF. Mix and match per chat.
+- ⚡ **See the engine.** Live **tokens/sec** and token counts on every reply, plus a **context gauge** that detects/scales to the model's window (manual override up to 512k+) and **auto-compacts** old turns when you near the budget.
+- 🧠 **Reasoning you can read.** Models that "think" get a collapsible trace with **its own scroll**, so you can follow the thought without losing your place in the chat.
+- 🎭 **Personas.** Named response presets (built-in + your own) prepended to the system prompt — switch the assistant's voice in a tap.
+- 🛠️ **A real harness, not a wrapper.** On-device code interpreter, Canvas with versions + live preview, deep research, model comparison, voice mode with barge-in — all client-side.
 
 ## Features
 
-- **Streaming chat** with any OpenAI-compatible endpoint (local LAN, cloud) or Anthropic, with a live typing cursor.
-- **Multiple providers & models** — add your own endpoint + key in Settings; switch per chat. A **model picker** offers capability presets (vision, reasoning) per provider, plus manual entry and model discovery.
-- **Rich markdown** — headings, bold/italic, nested lists, blockquotes, tables, and fenced code blocks with on-device syntax highlighting.
-- **Math (LaTeX)** — inline `$…$` and display `$$…$$` formulas (fractions, roots, integrals, Greek) typeset natively on-device — no webview, no server.
-- **Visible reasoning** — collapsible "thinking" trace for models that emit it.
-- **Web search with inline citations** — grounded answers with tappable source pills.
-- **Generative UI cards** — native weather and currency-conversion cards rendered from public, key-free APIs (Open-Meteo, Frankfurter/BCE).
-- **Image generation, editing & variations** — generate an image, then create a variation or redraw it with a prompt (image-to-image), on providers that support it.
-- **Deep research** — the model plans sub-queries, the app searches and reads the web, then synthesizes a cited report (client-side, no backend).
-- **Share extension** — share text, links or images from any app straight into a new Open Pilot conversation (via a shared App Group, no backend).
-- **Siri & Shortcuts** — ask your model a question, start a new chat, or jump into live voice mode through App Intents (on-device, no backend).
-- **On-device model** — use Apple Intelligence's on-device model (FoundationModels) as a provider: no server, no API key, no model download. Requires a compatible device (iOS 26+); the provider editor shows live availability.
-- **Offline GGUF models** — run open GGUF models (Qwen, Llama, Gemma…) fully on-device with **llama.cpp**: no server, no API key, and no Apple Intelligence required. Download a model in **Settings → Local Models**, then choose the *On-device (GGUF)* provider. CPU inference; small quantized models recommended.
-- **Voice** — dictate messages with on-device speech recognition, read replies aloud with a **pickable device voice**, and a **live voice mode** for continuous hands-free conversation (listen → reply → listen) with **barge-in** (interrupt the assistant by speaking).
-- **Attachments** — photos from library or camera, plus **files** (PDF, documents, code) extracted into the model's context.
-- **Canvas** — a side editor for code or text you can revise by hand or ask the model to change, with navigable versions. A **Code / Preview** toggle renders HTML & JavaScript in an on-device WebView and draws **Mermaid** diagrams fully offline (bundled mermaid.js).
-- **Edit & resend with versions** — editing a message keeps the original and lets you flip between branches (`< 1/2 >`); **rename** and search chats (by title or content).
-- **Export & import** — export any chat as **Markdown**, **PDF**, or a faithful **JSON** backup (full version tree, reasoning, attachments); import a JSON backup to restore it. Everything stays on-device.
-- **Custom instructions** — persistent "about you" and response preferences injected into every chat.
-- **Projects & automatic memory** — group chats into projects with their own instructions; the app remembers facts about you across chats (editable in Settings).
-- **Prompt library & slash commands** — save reusable prompts and insert them by typing `/` in the composer (filtered live as you type). Manage them in Settings or the + menu.
-- **Code interpreter** — run JavaScript in an on-device sandbox (no network or file access) straight from a code block, and render `csv` blocks as bar charts. Nothing leaves the device.
-- **Context management** — a live token estimate above the composer, plus automatic compaction that condenses older messages into a summary when a chat grows past your chosen budget (recent messages stay verbatim).
-- **Model comparison** — send one prompt to several models at once and read their streaming answers side by side, each column re-pointable at any configured provider/model.
-- **Temporary chat** — a private mode that uses no memory and is never saved to history.
-- **Organize** — pin and archive conversations; the sidebar groups by date.
-- **Quality-of-life** — smart titles, regenerate, 👍/👎 feedback on replies, search within a conversation, response-length control, tokens/sec + token counts, tap-anywhere to dismiss the keyboard.
-- **English / Español** — follows the device language, with a manual override.
-- **Appearance** — Automatic / Light / Dark.
-- **iPad & Mac ready** — a persistent two-column split view on larger screens (a drawer on iPhone), plus keyboard shortcuts: ⌘N new chat, ⌘Return send, ⌘F search, ⌘B sidebar, ⌘, settings.
-- **Local-first storage** via SwiftData; **API keys in the device Keychain**. No server in the middle.
-- **Tested** — an XCTest suite covers the version tree, model catalog, custom instructions, file parsing, citations, Canvas helpers, projects, memory, feedback, temporary chat, in-conversation search, LaTeX parsing, export/import round-trips, prompt slash matching, JavaScript sandbox execution, CSV parsing, context compaction, Canvas preview document building, model-comparison column logic, and voice selection/barge-in logic.
+### Chat & models
+- **Streaming chat** with a live typing cursor over any OpenAI-compatible endpoint or Anthropic.
+- **Multiple providers & models** — add endpoints + keys in Settings, switch per chat; a **model picker** with capability presets (vision, reasoning), manual entry and server model discovery.
+- **Model comparison** — one prompt to several models at once, streaming answers side by side, each column re-pointable.
+- **Edit & resend with version branches** (`< 1/2 >`), regenerate, **Continue** a truncated answer, smart titles, 👍/👎 feedback.
+- **Reply / quote threading**, per-conversation **drafts**, and an **outline** that lists your turns and jumps to any message.
 
-## Privacy
+### Reasoning & context
+- **Visible reasoning** with a dedicated, independently-scrolling panel.
+- **Live telemetry** — tokens/sec, prompt/completion token counts per message.
+- **Context gauge** above the composer; window auto-detected/scaled (override up to 512k+), with a budget that defaults to ~70% of the window.
+- **Automatic compaction** condenses older messages into a summary past your budget (recent turns stay verbatim); **compact now** on demand with a savings report.
 
-Open Pilot has **no backend**. Requests go straight from your device to the provider you configure. Conversations are stored locally on the device (SwiftData) and API keys are kept in the device **Keychain** — never in plaintext, never sent anywhere else. The app permits local-network HTTP so you can reach a self-hosted model (e.g. `http://192.168.x.x:8080/v1`).
+### Knowledge & the web
+- **Web search with inline citations** — grounded answers with tappable source pills and **citation preview cards**.
+- **Web fetch → readable text** — pulls article/main content (size-capped), fully client-side.
+- **Deep research** — the model plans sub-queries, the app searches and reads the web, then synthesizes a cited report.
+- **Generative UI cards** — native weather and currency cards from public, key-free APIs (Open-Meteo, Frankfurter/BCE).
 
-## Build (iOS)
+### Create & code
+- **Rich Markdown** — headings, lists, blockquotes, tables, fenced code with on-device syntax highlighting (throttled streaming for smooth scroll).
+- **Native LaTeX math** — inline `$…$` and display `$$…$$` typeset on-device (no webview, no server).
+- **Canvas** — a model-assisted side editor with navigable versions; **Code / Preview** renders HTML & JavaScript in an on-device WebView and draws **Mermaid** diagrams fully offline.
+- **Code interpreter** — run JavaScript in an on-device sandbox (no network/files) from a code block; render `csv` blocks as bar charts.
+- **Image generation, editing & variations** (image-to-image) on providers that support it.
+
+### Voice
+- **Dictation** with on-device speech recognition; **read replies aloud** with a pickable device voice.
+- **Live voice mode** — continuous hands-free listen → reply → listen with **barge-in** (interrupt by speaking) and a **live audio spectrum**.
+
+### Attachments
+- Photos from library or camera, plus **files** extracted into context: **PDF, .docx, .xlsx**, Markdown, code, CSV, JSON, XML, YAML, RTF and plain text — parsed on-device.
+
+### Memory & personalization
+- **Custom instructions** ("about you" + response preferences) injected into every chat.
+- **Personas** — built-in and custom response presets.
+- **Projects & automatic memory** — group chats with their own instructions; the app remembers facts about you across chats (editable in Settings), with an optional overnight **Dream** consolidation pass.
+- **Prompt library & `/` slash commands** — reusable prompts inserted live as you type.
+- **Temporary chat** — private mode with no memory and no history.
+
+### Organize & export
+- **Pin, archive, smart folders**, date-grouped sidebar, rename, and search by title or content; in-conversation search.
+- **Export & import** — any chat as **Markdown**, **PDF**, or a faithful **JSON** backup (full version tree, reasoning, attachments); import JSON to restore.
+- **Share extension**, **Siri & Shortcuts** (App Intents), Spotlight and Handoff. *(Extensions ship in the repo; the prebuilt IPA is core-only — see note below.)*
+
+### Platform & polish
+- **On-device model** (Apple Intelligence / FoundationModels) and **offline GGUF** (llama.cpp) providers — no server, no key.
+- **English / Español** (follows device, manual override); **Automatic / Light / Dark**.
+- **iPad & Mac ready** — two-column split view, keyboard shortcuts (⌘N, ⌘Return, ⌘F, ⌘B, ⌘,).
+- **First-run onboarding**, haptics, and a native, fluid SwiftUI interface.
+
+## Providers
+
+| Provider | Endpoint | Key needed | Notes |
+|---|---|:--:|---|
+| **OpenAI-compatible (cloud)** | e.g. `https://dashscope.aliyuncs.com/compatible-mode/v1` (Qwen), OpenAI, Groq, Together… | ✅ | Any `/v1`-style API; add in Settings → Providers |
+| **OpenAI-compatible (local)** | e.g. `http://192.168.x.x:8080/v1` (llama.cpp, LM Studio, vLLM, Ollama…) | optional | Local-network HTTP permitted |
+| **Anthropic** | `https://api.anthropic.com` | ✅ | Native Messages API |
+| **On-device (Apple)** | FoundationModels | ❌ | Apple Intelligence, iOS 26+ compatible device |
+| **On-device (GGUF)** | llama.cpp, bundled | ❌ | Download a `.gguf` in Settings → Local Models; CPU inference |
+
+## Getting started
+
+### Option A — Sideload the IPA (no Xcode)
+
+Grab `OpenPilot.ipa` from the [latest release](https://github.com/ELPilotPR/open-pilot/releases/latest) and install it with a sideloading tool using your own Apple ID:
+
+- **[AltStore](https://altstore.io)** / **[SideStore](https://sidestore.io)** — refresh over Wi-Fi, no computer after setup.
+- **[Sideloadly](https://sideloadly.io)** — desktop installer (macOS/Windows).
+
+> The release IPA is **development-signed and core-only**: the chat app with every provider above. The Share / Keyboard / Widget extensions and Live Activities require the **App Groups** capability (an explicit provisioning profile), so they are built from source rather than included in the prebuilt IPA. Sideloading re-signs with your Apple ID; a free account works (7-day refresh) as does a paid one.
+
+### Option B — Build from source
 
 Requirements: macOS with **Xcode 16+** (iOS 18 SDK) and **[XcodeGen](https://github.com/yonaskolb/XcodeGen)**.
 
@@ -55,46 +139,67 @@ xcodegen generate              # creates OpenPilot.xcodeproj from project.yml
 open OpenPilot.xcodeproj
 ```
 
-Then select your signing team and run on a simulator or device. On first launch, open **Settings → Providers**, add an endpoint (e.g. your local model or a cloud API) and paste your key. That's it.
+Select your signing team and run on a simulator or device. On first launch, open **Settings → Providers**, add an endpoint (your local model or a cloud API) and paste your key. That's it.
 
-> The Xcode project is generated from `ios/project.yml`; it is intentionally not committed.
->
-> The offline GGUF provider links the prebuilt `llama.xcframework` (gitignored, ~568 MB extracted). `scripts/bootstrap-gguf.sh` downloads and checksum-verifies it once; run it before `xcodegen generate`.
+> The Xcode project is generated from `ios/project.yml` and intentionally not committed. A **core-only** spec (`project-core.yml` → `OpenPilotCore.xcodeproj`) builds the app without App Group entitlements — handy for installing with a wildcard provisioning profile. The offline GGUF provider links the prebuilt `llama.xcframework` (gitignored, ~568 MB extracted); `scripts/bootstrap-gguf.sh` downloads and checksum-verifies it once.
 
-## Repository layout
+## Architecture
+
+Pure **SwiftUI + SwiftData**, no third-party UI dependencies, no backend. The device is the client: providers are plain HTTP/SSE (or on-device inference), and every helper that can be tested is a pure, isolated function.
 
 ```
-ios/            Native iOS app (SwiftUI + SwiftData)
-  project.yml   XcodeGen spec (source of truth for the Xcode project)
-  OpenPilot/    App source
+ios/
+  project.yml            XcodeGen spec — source of truth for the Xcode project
+  project-core.yml       Core-only spec (no App Groups) for wildcard signing
+  OpenPilot/
+    Models/              SwiftData models (Conversation, Message, ProviderConfig…)
+    Providers/           OpenAI-compatible, Anthropic, FoundationModels, GGUF (llama.cpp)
+    Services/            streaming, context/compaction, web search, memory, personas,
+                         office parsing, export/import, voice, code interpreter…
+    ViewModels/          chat orchestration
+    Views/               SwiftUI screens (chat, canvas, compare, settings, onboarding…)
+    Resources/           bundled mermaid.js (offline diagrams)
+  OpenPilotTests/        XCTest suite (477 tests)
+  ShareExtension/  WidgetExtension/  KeyboardExtension/   (App Group capabilities)
+docs/                    feature inventory, privacy policy, screenshots
+```
+
+## Privacy & security
+
+Open Pilot has **no backend**. Requests go straight from your device to the provider you configure. Conversations are stored locally (SwiftData) and API keys are kept in the device **Keychain** — never in plaintext, never sent anywhere else. The app permits local-network HTTP so you can reach a self-hosted model. The code interpreter runs in a sandbox with **no network or file access**. Web features call public APIs directly from the device.
+
+Read the full [privacy policy](https://elpilotpr.github.io/open-pilot/privacy-policy.html).
+
+## Testing
+
+An **XCTest suite (477 tests)** covers the version tree, model catalog, custom instructions, file/office parsing, citations, Canvas helpers, projects, memory, personas, feedback, temporary chat, in-conversation search, LaTeX parsing, export/import round-trips, prompt slash matching, JavaScript sandbox execution, CSV parsing, context compaction & budgeting, Canvas preview building, model-comparison logic, the chat outline, and voice selection/barge-in logic.
+
+```bash
+cd ios
+xcodegen generate
+xcodebuild test -project OpenPilot.xcodeproj -scheme OpenPilot \
+  -destination 'platform=iOS Simulator,name=iPhone 16'
 ```
 
 ## Roadmap
 
-- [x] iOS: streaming, markdown/tables + syntax highlighting, LaTeX math, web citations, GenUI cards, images, voice, attachments
-- [x] Reasoning/thoughts display
-- [x] Edit & resend with version branches, export (Markdown/PDF/JSON) & import, rename, conversation search
-- [x] i18n (EN/ES), Light/Dark appearance, Keychain-backed keys
-- [x] Model picker with capability presets
-- [x] Custom instructions, pin/archive, file attachments (PDF/docs/code)
-- [x] Canvas (model-assisted editor with versions)
-- [x] Canvas live preview (HTML/JS WebView) + offline Mermaid diagrams
-- [x] Side-by-side multi-model comparison
-- [x] iPad/Mac split view + keyboard shortcuts
-- [x] Image editing & variations (image-to-image)
-- [x] Deep research (agentic multi-step web browse)
-- [x] Share extension (text / URL / image intake)
-- [x] Siri & Shortcuts (App Intents)
-- [x] Voice picker + barge-in (interrupt the assistant by speaking)
-- [x] Live voice mode (hands-free)
-- [x] Automated XCTest suite
-- [x] Projects + automatic memory, 👍/👎 feedback, temporary chat, in-conversation search
-- [x] Prompt library with `/` slash commands
-- [x] On-device code interpreter (sandboxed JavaScript) + CSV → charts
-- [x] Context token indicator + automatic compaction
-- [x] On-device model (Apple Intelligence / FoundationModels)
-- [ ] Windows / Android / desktop clients
+- [x] Streaming, Markdown/tables + syntax highlighting, native LaTeX, web citations, GenUI cards, images, voice, attachments
+- [x] Reasoning panel, live tok/s + context gauge, auto-compaction & budgeting
+- [x] Edit/resend version branches, Continue, drafts, quote threading, outline / jump-to-message
+- [x] Export (Markdown/PDF/JSON) & import, rename, conversation search, pin/archive/smart folders
+- [x] Canvas (versions) + live HTML/JS preview + offline Mermaid; on-device code interpreter + CSV charts
+- [x] Side-by-side model comparison; deep research; image editing & variations
+- [x] Personas, custom instructions, projects + automatic memory (+ Dream), prompt library / slash commands
+- [x] Voice picker + barge-in + live spectrum; live hands-free voice mode
+- [x] On-device model (FoundationModels) + offline GGUF (llama.cpp)
+- [x] Office attachments (.docx/.xlsx), first-run onboarding, i18n (EN/ES), Light/Dark, Keychain keys
+- [x] Share extension, Siri & Shortcuts, iPad/Mac split view + shortcuts, automated XCTest suite
+- [ ] Windows / Android / desktop clients (monorepo-ready)
+
+## Contributing
+
+Issues and PRs are welcome. Please keep the **no-backend, on-device-first** principle: new features should run client-side and respect the Keychain/SwiftData privacy model. Run the XCTest suite before submitting.
 
 ## License
 
-[MIT](LICENSE). Contributions welcome.
+[MIT](LICENSE) © Open Pilot contributors.
