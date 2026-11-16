@@ -293,7 +293,7 @@ struct ProviderEditorView: View {
                 try? context.save()
                 contextStatus = T("Detected: \(TokenFormat.short(w)) tokens.", "Detectado: \(TokenFormat.short(w)) tokens.")
             } else {
-                contextStatus = T("This server doesn't report its context. Type your model's max above — e.g. 512000 for a 512k Qwen.", "Este servidor no reporta su contexto. Escribe arriba el máximo de tu modelo — p. ej. 512000 para un Qwen de 512k.")
+                contextStatus = T("This server doesn't report its context, so Open Pilot estimates it from the model name (shown in Effective context). Override it above if you know the exact max.", "Este servidor no reporta su contexto, así que Open Pilot lo estima por el nombre del modelo (lo ves en Contexto efectivo). Ponlo a mano arriba si conoces el máximo exacto.")
             }
             detectingContext = false
         }

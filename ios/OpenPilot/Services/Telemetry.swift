@@ -17,11 +17,22 @@ enum ModelContextWindow {
         if m.contains("gpt-3.5") { return 16_385 }
         if m.contains("gemini") { return 1_000_000 }
         if m.contains("claude") { return 200_000 }
+        // Qwen / DashScope: catálogo por generación. Los flagship modernos
+        // (qwen3.x con punto, qwen4, plus/flash/turbo actuales, coder-plus/flash)
+        // aceptan 1M de contexto; qwen3 «a secas» (max/235b/coder) = 256k.
         if m.contains("qwen-long") { return 1_000_000 }
+        if m.contains("qwen3-coder-plus") || m.contains("qwen3-coder-flash") { return 1_000_000 }
+        if m.range(of: #"qwen[3-9]\.[0-9]"#, options: .regularExpression) != nil { return 1_000_000 }
+        if m.contains("qwen4") || m.contains("qwen-4") { return 1_000_000 }
+        if m.contains("qwen-plus") || m.contains("qwen-flash") || m.contains("qwen-turbo") { return 1_000_000 }
         if m.contains("qwen3") || m.contains("qwen-3") { return 262_144 }
         if m.contains("qwen2.5") || m.contains("qwen-2.5") { return 131_072 }
         if m.contains("qwen") { return 131_072 }
+        // DeepSeek: V3.1/V3.2/V4 = 128k; el alias clásico deepseek-chat = 64k.
+        if m.contains("deepseek-v4") || m.contains("deepseek-v3.1") || m.contains("deepseek-v3.2") { return 128_000 }
         if m.contains("deepseek") { return 65_536 }
+        // GLM (Zhipu) 4.6 / 5.x ≈ 200k.
+        if m.contains("glm") { return 200_000 }
         if m.contains("llama-3") || m.contains("llama3") { return 131_072 }
         if m.contains("mistral") || m.contains("mixtral") { return 32_768 }
         if kind == "gguf" { return 8192 }
