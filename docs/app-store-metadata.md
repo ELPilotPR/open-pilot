@@ -1,7 +1,7 @@
 # App Store Connect / TestFlight metadata — Open Pilot
 
 Ready-to-paste fields. English (primary locale). No reference to any reverse-engineered
-product. Bundle id: `com.openpilot.app` · Team: `X4F3CGCVYH` · Version 1.0.0 (build 1).
+product. Bundle id: `com.openpilot.app` · Team: `X4F3CGCVYH` · Version 1.0.1 (build 2).
 
 ## App information
 - **Name:** Open Pilot
