@@ -8,6 +8,8 @@ struct MessageRow: View {
     var liveTPS: Double = 0
     var onRegenerate: (() -> Void)? = nil
     var onEdit: (() -> Void)? = nil
+    var onQuote: (() -> Void)? = nil
+    var onContinue: (() -> Void)? = nil
     var onVariation: (() -> Void)? = nil
     var onEditImage: (() -> Void)? = nil
     /// Navegación de versiones < n/m > (0 = sin versiones).
@@ -67,6 +69,9 @@ struct MessageRow: View {
                             Button { onEdit() } label: { Label(T("Edit", "Editar"), systemImage: "pencil") }
                         }
                         Button { copyMessage() } label: { Label(T("Copy", "Copiar"), systemImage: "doc.on.doc") }
+                        if let onQuote {
+                            Button { onQuote() } label: { Label(T("Quote", "Citar"), systemImage: "text.quote") }
+                        }
                     }
                     .accessibilityLabel(T("Your message", "Tu mensaje"))
                     .accessibilityHint(T("Tap to edit and resend", "Toca para editar y reenviar"))
@@ -101,6 +106,8 @@ struct MessageRow: View {
                         }
                         Spacer(minLength: 0)
                         if let onRegenerate { regenerateButton(onRegenerate) }
+                        if let onContinue { continueButton(onContinue) }
+                        if let onQuote { quoteButton(onQuote) }
                         if !message.text.isEmpty && !isActive { speakButton }
                         if !message.text.isEmpty && !isActive { copyButton }
                         if !message.text.isEmpty && !isActive { feedbackButtons }
@@ -275,6 +282,26 @@ struct MessageRow: View {
                 .font(.system(size: 13))
                 .foregroundStyle(OP.textSecondary)
                 .accessibilityLabel(T("Regenerate", "Regenerar"))
+        }
+        .buttonStyle(ScaleButtonStyle())
+    }
+
+    private func continueButton(_ action: @escaping () -> Void) -> some View {
+        Button { action(); Haptic.light() } label: {
+            Image(systemName: "arrow.right.to.line")
+                .font(.system(size: 13))
+                .foregroundStyle(ContinueSupport.looksTruncated(message.text) ? OP.accent : OP.textSecondary)
+                .accessibilityLabel(T("Continue", "Continuar"))
+        }
+        .buttonStyle(ScaleButtonStyle())
+    }
+
+    private func quoteButton(_ action: @escaping () -> Void) -> some View {
+        Button { action(); Haptic.light() } label: {
+            Image(systemName: "text.quote")
+                .font(.system(size: 13))
+                .foregroundStyle(OP.textSecondary)
+                .accessibilityLabel(T("Quote", "Citar"))
         }
         .buttonStyle(ScaleButtonStyle())
     }

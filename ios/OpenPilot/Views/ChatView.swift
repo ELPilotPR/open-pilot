@@ -15,6 +15,8 @@ struct ChatView: View {
     @StateObject private var vm = ChatViewModel()
     @State private var input = ""
     @State private var detectedWindow = 0
+    @State private var compactReport: String?
+    @State private var showCompactAlert = false
     @State private var pendingXSuccess: String?
     @State private var pendingXError: String?
     @State private var library = PromptLibrary.shared
@@ -936,6 +938,8 @@ struct ChatView: View {
                                        liveTPS: vm.liveTPS,
                                        onRegenerate: (!vm.isStreaming && !showSearch && m.role == "assistant" && idx == messages.count - 1) ? { regenerate() } : nil,
                                        onEdit: (!vm.isStreaming && !showSearch && m.role == "user") ? { startEdit(m) } : nil,
+                                       onQuote: (!vm.isStreaming && !showSearch && !m.text.isEmpty) ? { quoteMessage(m) } : nil,
+                                       onContinue: (!vm.isStreaming && !showSearch && m.role == "assistant" && idx == messages.count - 1 && !m.text.isEmpty) ? { continueAnswer() } : nil,
                                        onVariation: (!vm.isStreaming && m.role == "assistant" && !m.imageData.isEmpty) ? {
                                            if let p = activeProvider, let c = current {
                                                vm.variationImage(source: m.imageData, conversation: c, provider: p, context: context, imageModel: imageModel)
@@ -1239,6 +1243,12 @@ struct ChatView: View {
                         .font(.caption2)
                 }
                 Spacer(minLength: 0)
+                Button { compactNow() } label: {
+                    Image(systemName: "arrow.down.right.and.arrow.up.left")
+                        .font(.system(size: 11))
+                        .accessibilityLabel(T("Compact now", "Compactar ahora"))
+                }
+                .buttonStyle(.plain)
             }
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
@@ -1254,6 +1264,11 @@ struct ChatView: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(T("Context", "Contexto") + ": \(gauge.percent)% " + T("used", "usado"))
         .task(id: ctxKey) { await refreshContextWindow() }
+        .alert(T("Compact context", "Compactar contexto"), isPresented: $showCompactAlert) {
+            Button(T("OK", "OK"), role: .cancel) {}
+        } message: {
+            Text(compactReport ?? "")
+        }
     }
 
     /// Detecta la ventana de contexto real del servidor (cacheada) si no hay
@@ -1291,6 +1306,9 @@ struct ChatView: View {
                     .tint(OP.accent)
                     .foregroundStyle(OP.textPrimary)
                     .padding(.vertical, 4)
+                    .onAppear { if let id = current?.id { input = DraftStore.text(for: id.uuidString) } }
+                    .onChange(of: current?.id) { _, newID in input = newID.map { DraftStore.text(for: $0.uuidString) } ?? "" }
+                    .onChange(of: input) { _, new in if let id = current?.id { DraftStore.save(new, for: id.uuidString) } }
                 HStack(spacing: 6) {
             Menu {
                 PhotosPicker(selection: $photoItem, matching: .images) {
@@ -1625,6 +1643,29 @@ struct ChatView: View {
         vm.editAndResend(m, newText: text, conversation: c, provider: p, context: context)
     }
 
+    /// Cita un mensaje en el composer como blockquote y enfoca el composer.
+    private func quoteMessage(_ m: Message) {
+        let q = QuoteSupport.blockquote(m.text)
+        guard !q.isEmpty else { return }
+        input = q + "\n\n" + input
+        composerFocused = true
+        Haptic.selection()
+    }
+
+    /// Continúa la última respuesta truncada en el mismo mensaje.
+    private func continueAnswer() {
+        guard let p = activeProvider, let c = current else { return }
+        vm.continueAnswer(conversation: c, provider: p, context: context)
+    }
+
+    /// Compactación manual: calcula el plan y muestra el informe en una alerta.
+    private func compactNow() {
+        guard let p = activeProvider, let c = current else { return }
+        compactReport = ContextManager.compactReport(vm.compactPlan(conversation: c, provider: p))
+        showCompactAlert = true
+        Haptic.selection()
+    }
+
     private func send() {
         guard let p = activeProvider else { return }
         if imageMode && !imagesAvailable {
@@ -1647,6 +1688,7 @@ struct ChatView: View {
             context.insert(c); try? context.save()
         }
         current = c
+        DraftStore.clear(for: c.id.uuidString)
         if imageMode {
             vm.generateImage(prompt: text, conversation: c, provider: p, context: context, imageModel: imageModel)
         } else {

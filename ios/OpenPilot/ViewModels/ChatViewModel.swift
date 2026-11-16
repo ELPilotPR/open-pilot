@@ -420,6 +420,17 @@ final class ChatViewModel: ObservableObject {
         }
     }
 
+    /// Plan de compactación manual del chat actual (mismo presupuesto que el auto).
+    func compactPlan(conversation: Conversation, provider: ProviderConfig) -> ContextManager.Plan {
+        let turns = conversation.activeMessages
+            .filter { $0.role != "assistant" || !$0.text.isEmpty }
+            .map { ChatTurn(role: $0.role, content: $0.text) }
+        let window = ModelContextWindow.resolve(model: conversation.model, kind: provider.kind,
+                                                override: provider.contextWindow,
+                                                detected: ContextWindowDetector.cached(providerID: provider.id, model: conversation.model) ?? 0)
+        return ContextManager.compact(turns, budget: ContextManager.effectiveBudget(window: window, manual: ContextSettings.budgetTokens))
+    }
+
     /// Regenera la última respuesta como una NUEVA versión (rama hermana): la
     /// anterior se conserva y se navega con < n/m >. Conserva si usó browse.
     func regenerate(conversation: Conversation, provider: ProviderConfig, context: ModelContext) {
@@ -485,6 +496,67 @@ final class ChatViewModel: ObservableObject {
         runAssistant(assistant, userText: trimmed, hasImage: img != nil,
                      conversation: conversation, provider: provider, context: context,
                      browse: hadBrowse, isFirstTurn: false)
+    }
+
+    /// Continúa la última respuesta assistant EN EL MISMO mensaje (no crea rama):
+    /// pide al modelo seguir donde quedó y anexa los deltas al texto existente.
+    func continueAnswer(conversation: Conversation, provider: ProviderConfig, context: ModelContext) {
+        guard !isStreaming else { return }
+        conversation.ensureTree()
+        let msgs = conversation.activeMessages
+        guard let assistant = msgs.last(where: { $0.role == "assistant" }), !assistant.text.isEmpty else { return }
+        let history = msgs
+            .filter { $0.role != "assistant" || !$0.text.isEmpty }
+            .map { m -> ChatTurn in
+                var content = m.text
+                if m.role == "user", let ft = m.attachmentText, !ft.isEmpty {
+                    content += "\n\n[Archivo adjunto: \(m.attachmentName ?? "archivo")]\n\n\(ft)"
+                }
+                return ChatTurn(role: m.role, content: content,
+                                images: (m.role == "user" && !m.imageData.isEmpty) ? [m.imageData] : [])
+            }
+        let prov = ProviderFactory.make(kind: provider.kind)
+        let model = VisionRouting.effectiveModel(current: conversation.model, hasImage: false,
+                                                 kind: provider.kind, baseURL: provider.baseURL)
+        let baseURL = provider.baseURL
+        let apiKey = provider.apiKey
+        isStreaming = true
+        task = Task { [weak self] in
+            guard let self else { return }
+            var turns = history
+            turns.append(ChatTurn(role: "user", content: ContinueSupport.instruction))
+            let genStart = Date()
+            var lastLive = genStart
+            var usageCompletion = 0
+            self.liveTPS = 0
+            do {
+                for try await ev in prov.stream(turns: turns, model: model, baseURL: baseURL, apiKey: apiKey) {
+                    if Task.isCancelled { break }
+                    switch ev {
+                    case .delta(let t):
+                        assistant.text += t
+                        let now = Date()
+                        if now.timeIntervalSince(lastLive) >= 0.25 {
+                            lastLive = now
+                            let tok = usageCompletion > 0 ? usageCompletion : LiveSpeed.estimateTokens(assistant.text)
+                            self.liveTPS = LiveSpeed.tps(tokens: tok, elapsed: now.timeIntervalSince(genStart))
+                        }
+                    case .reasoning(let r): assistant.reasoning += r
+                    case .usage(_, let c): usageCompletion = c
+                    case .done: break
+                    }
+                }
+            } catch {
+                if !Task.isCancelled { self.errorText = error.localizedDescription }
+            }
+            self.liveTPS = 0
+            let elapsed = Date().timeIntervalSince(genStart)
+            let outTok = usageCompletion > 0 ? usageCompletion : max(1, assistant.text.count / 4)
+            assistant.completionTokens = outTok
+            assistant.tokensPerSecond = elapsed > 0 ? Double(outTok) / elapsed : 0
+            try? context.save()
+            self.isStreaming = false
+        }
     }
 
     func stop() {

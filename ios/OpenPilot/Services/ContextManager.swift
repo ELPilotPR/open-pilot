@@ -77,4 +77,16 @@ enum ContextManager {
         }
         return lines.joined(separator: "\n")
     }
+
+    /// Informe legible del plan para la alerta de "Compactar ahora".
+    static func compactReport(_ plan: Plan) -> String {
+        guard plan.didCompact else {
+            return T("This chat fits the budget (\(plan.beforeTokens) tokens). Nothing to compact.",
+                     "Este chat cabe en el presupuesto (\(plan.beforeTokens) tokens). Nada que compactar.")
+        }
+        let saved = max(0, plan.beforeTokens - plan.afterTokens)
+        let pct = plan.beforeTokens > 0 ? Int(Double(saved) / Double(plan.beforeTokens) * 100) : 0
+        return T("Compacted \(plan.foldedCount) older messages: \(plan.beforeTokens) → \(plan.afterTokens) tokens (−\(pct)%). The digest is applied automatically when you send.",
+                 "Compactados \(plan.foldedCount) mensajes antiguos: \(plan.beforeTokens) → \(plan.afterTokens) tokens (−\(pct)%). El resumen se aplica solo al enviar.")
+    }
 }
