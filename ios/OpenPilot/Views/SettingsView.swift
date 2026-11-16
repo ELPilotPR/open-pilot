@@ -16,6 +16,7 @@ struct SettingsView: View {
     @AppStorage("context.budget") private var contextBudget = 0
     @AppStorage("hapticsEnabled") private var hapticsEnabled = true
     @State private var showVoicePicker = false
+    @State private var showIntro = false
 
     var body: some View {
         List {
@@ -126,6 +127,15 @@ struct SettingsView: View {
                         Text(ciStatus).font(.caption).foregroundStyle(OP.textSecondary)
                     }
                 }
+                NavigationLink {
+                    PersonasView()
+                } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(T("Personas", "Personas")).foregroundStyle(OP.textPrimary)
+                        Text(PersonaStore.selected?.name ?? T("Default", "Por defecto"))
+                            .font(.caption).foregroundStyle(OP.textSecondary)
+                    }
+                }
             } header: {
                 Text(T("Personalization", "Personalización"))
             } footer: {
@@ -234,6 +244,14 @@ struct SettingsView: View {
             }
 
             Section {
+                Button { showIntro = true } label: {
+                    Label(T("View intro", "Ver introducción"), systemImage: "sparkles")
+                }
+            } header: {
+                Text(T("About", "Acerca de"))
+            }
+
+            Section {
                 Button { addProvider() } label: {
                     Label(T("Add OpenAI-compatible API", "Agregar API OpenAI-compatible"), systemImage: "plus")
                 }
@@ -245,6 +263,7 @@ struct SettingsView: View {
         .navigationTitle(T("Settings", "Ajustes"))
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showVoicePicker) { VoicePickerView() }
+        .sheet(isPresented: $showIntro) { OnboardingView { showIntro = false } }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button(T("Done", "Listo")) { dismiss() }

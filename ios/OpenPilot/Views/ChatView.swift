@@ -26,6 +26,7 @@ struct ChatView: View {
     @State private var atBottom = true
     @State private var demoScrollNudge = 0
     @State private var demoScrollTarget: UUID?
+    @State private var showOutline = false
     @State private var attachedImage: Data?
     @State private var attachedFile: FileAttachment.Parsed?
     @State private var showFilePicker = false
@@ -165,6 +166,9 @@ struct ChatView: View {
         .onChange(of: scenePhase) { _, p in if p == .active { consumeVoiceIntent(); consumeAskDeepLink() } }
         .onChange(of: vm.isStreaming) { old, new in if old && !new { fireDeepLinkCallback() } }
         .sheet(isPresented: $showPromptLibrary) { NavigationStack { PromptLibraryView() } }
+        .sheet(isPresented: $showOutline) {
+            ChatOutlineView(entries: ChatOutline.entries(messages)) { id in jumpToMessage(id) }
+        }
         .animation(.easeInOut(duration: 0.2), value: vm.statusText == nil)
         .onChange(of: imageMode) { _, on in if on { probeIfNeeded() } }
         .onChange(of: activeProvider?.id) { _, _ in if imageMode { probeIfNeeded() } }
@@ -819,6 +823,9 @@ struct ChatView: View {
                     Button { showDocScan = true; Haptic.light() } label: {
                         Label(T("Scan document…", "Escanear documento…"), systemImage: "doc.viewfinder")
                     }
+                    Button { showOutline = true; Haptic.light() } label: {
+                        Label(T("Outline…", "Índice…"), systemImage: "list.bullet")
+                    }
                 } label: {
                     Image(systemName: "ellipsis.circle").font(.system(size: 18, weight: .medium))
                         .accessibilityLabel(T("More actions", "Más acciones"))
@@ -858,6 +865,12 @@ struct ChatView: View {
             .padding(.horizontal, 12).padding(.vertical, 6)
             .contentShape(Rectangle())
         }
+    }
+
+    /// Salta a un mensaje concreto (desde el índice). Reutiliza el scroll por id.
+    private func jumpToMessage(_ id: UUID) {
+        demoScrollTarget = id
+        demoScrollNudge += 1
     }
 
     private func select(_ p: ProviderConfig, _ m: String) {

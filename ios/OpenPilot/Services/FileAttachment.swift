@@ -14,6 +14,8 @@ enum FileAttachment {
         var t: [UTType] = [.pdf, .plainText, .utf8PlainText, .sourceCode,
                            .json, .xml, .html, .commaSeparatedText, .rtf]
         if let md = UTType("net.daringfireball.markdown") { t.append(md) }
+        if let docx = UTType("org.openxmlformats.wordprocessingml.document") { t.append(docx) }
+        if let xlsx = UTType("org.openxmlformats.spreadsheetml.sheet") { t.append(xlsx) }
         return t
     }
 
@@ -26,6 +28,8 @@ enum FileAttachment {
         var text: String?
         if ext == "pdf" {
             text = PDFDocument(url: url)?.string
+        } else if ext == "docx" || ext == "xlsx" {
+            text = OfficeDocument.extractText(url: url)
         } else {
             if let d = try? Data(contentsOf: url) {
                 text = String(data: d, encoding: .utf8) ?? String(data: d, encoding: .isoLatin1)

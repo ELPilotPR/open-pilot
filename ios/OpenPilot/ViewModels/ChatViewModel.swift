@@ -97,6 +97,9 @@ final class ChatViewModel: ObservableObject {
                 }
             }
             var systemPrompt = ResponseStyle.current.systemPrompt
+        // Persona elegida: antepone su instrucción (vacío si "Por defecto").
+        let personaPrompt = PersonaStore.selectedPrompt
+        if !personaPrompt.isEmpty { systemPrompt = personaPrompt + "\n\n" + systemPrompt }
             let custom = CustomInstructions.systemPrompt
             if !custom.isEmpty { systemPrompt = custom + "\n\n" + systemPrompt }
             if !conversation.isTemporary {

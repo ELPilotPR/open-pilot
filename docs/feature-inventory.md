@@ -26,7 +26,7 @@ Legend: ✅ already in Open Pilot · 🔜 high value, build next · ➕ nice-to-
 | Live tokens/sec while generating | ✅ | Transparency + cool factor; the headline differentiator. |
 | Per-chat context gauge (used / model window, %) | ✅ | Shows how much context a chat costs; color tiers warn before overflow. |
 | Final tok/s + ↑in ↓out per message | ✅ | Honest per-answer cost. |
-| Web fetch → readable Markdown + depth guard + size cap | 🔜 | Cleaner browsing context, less junk fed to the model; pure client-side. |
+| Web fetch → readable Markdown (article/main, size cap) | ✅ | Prefers article/main, strips nav/scripts, caps length; pure client-side. |
 | Tap a citation → preview card | ✅ | Fast source verification without leaving the chat. |
 | Live voice spectrum while recording | ✅ | Feels alive; AVAudioRecorder metering drives a bar spectrum. |
 | Throttled Markdown render during streaming | ✅ | Smooth scrolling on phone CPUs; debounced ~8 fps re-parse. |
@@ -39,11 +39,11 @@ Legend: ✅ already in Open Pilot · 🔜 high value, build next · ➕ nice-to-
 | Reply / quote threading | ✅ | Quote a prior message into the composer. |
 | "Continue" a truncated answer | ✅ | One-tap continuation when output hits the cap. |
 | Compact context now (with savings report) | ✅ | Manual fold of older turns; reports tokens saved before sending. |
-| Turn outline / jump-to-message | ➕ | Navigate long chats. |
-| Welcome / onboarding cards | ➕ | First-run guidance (no prompt-suggestion chips — removed by design). |
-| Personas / response-style registry | ➕ | Extend the existing ResponseStyle with named presets. |
-| Office document parsing (.docx/.xlsx) | ➕ | Attachments beyond PDF/images; client-side unzip + XML. |
-| Import chats from other apps | ➕ | Portable history; ZIP/JSON. |
+| Turn outline / jump-to-message | ✅ | Menu → Outline lists user turns and scrolls to the chosen message. |
+| Welcome / onboarding cards | ✅ | First-run paged cards, re-viewable in Settings (no prompt-suggestion chips). |
+| Personas / response-style registry | ✅ | Named presets prepended to the system prompt; built-in + custom, in Settings. |
+| Office document parsing (.docx/.xlsx) | ✅ | Client-side ZIP + Compression; docx paragraphs, xlsx shared strings. |
+| Import chats from other apps | ✅ | Import chat JSON in the conversation list; export MD/JSON/PDF. |
 
 ## Tier 3 — marginal for a phone chat client
 

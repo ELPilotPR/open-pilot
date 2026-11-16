@@ -15,6 +15,7 @@ struct RootView: View {
     @State private var demoMemory = false
     @State private var demoUsage = false
     @AppStorage("appearanceMode") private var appearanceMode = "auto"
+    @AppStorage("hasOnboarded") private var hasOnboarded = false
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -51,6 +52,9 @@ struct RootView: View {
         }
         .sheet(isPresented: $demoUsage) {
             NavigationStack { UsageDashboardView() }
+        }
+        .fullScreenCover(isPresented: Binding(get: { !hasOnboarded }, set: { if !$0 { hasOnboarded = true } })) {
+            OnboardingView { hasOnboarded = true }
         }
         .task { purgeTemporary(); seedIfNeeded(); demoSidebarIfNeeded(); demoModelsIfNeeded(); demoProjectsIfNeeded(); demoMemoryIfNeeded(); demoShareIfNeeded(); demoOnDeviceIfNeeded(); demoUsageIfNeeded(); consumePendingShare(); consumeIntentFlags(); consumeSpotlight(); consumeHandoff(); WidgetBridge.refresh(context: context); KeyboardBridge.refresh(context: context) }
         .onChange(of: scenePhase) { _, phase in
