@@ -292,6 +292,12 @@ struct ProviderEditorView: View {
                 provider.contextWindow = w
                 try? context.save()
                 contextStatus = T("Detected: \(TokenFormat.short(w)) tokens.", "Detectado: \(TokenFormat.short(w)) tokens.")
+            } else if let w = await ContextWindowDetector.probeContextLimit(baseURL: base, apiKey: key, model: model) {
+                // Probe activo: desborda el contexto y lee el límite real del error
+                // (Qwen/DashScope: "Range of input length should be [1, N]").
+                provider.contextWindow = w
+                try? context.save()
+                contextStatus = T("Detected from server: \(TokenFormat.short(w)) tokens.", "Detectado del server: \(TokenFormat.short(w)) tokens.")
             } else {
                 contextStatus = T("This server doesn't report its context, so Open Pilot estimates it from the model name (shown in Effective context). Override it above if you know the exact max.", "Este servidor no reporta su contexto, así que Open Pilot lo estima por el nombre del modelo (lo ves en Contexto efectivo). Ponlo a mano arriba si conoces el máximo exacto.")
             }
