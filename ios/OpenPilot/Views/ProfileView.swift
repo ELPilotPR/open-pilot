@@ -13,6 +13,13 @@ struct ProfileView: View {
     @State private var threshold = ProfileStore.threshold
     @State private var isDreaming = false
     @State private var status = ""
+    @State private var dreamProviderID = ""
+    @State private var dreamModel = ""
+
+    private var selectedProvider: ProviderConfig? {
+        providers.first { $0.id == dreamProviderID } ?? providers.first
+    }
+    private var availableModels: [String] { selectedProvider?.models ?? [] }
 
     var body: some View {
         List {
@@ -27,6 +34,12 @@ struct ProfileView: View {
             }
 
             Section {
+                Picker(T("Provider", "Provider"), selection: $dreamProviderID) {
+                    ForEach(providers, id: \.id) { p in Text(p.name).tag(p.id) }
+                }
+                Picker(T("Model", "Modelo"), selection: $dreamModel) {
+                    ForEach(availableModels, id: \.self) { m in Text(m).tag(m) }
+                }
                 Button { dreamNow() } label: {
                     HStack {
                         Label(T("Dream now", "Soñar ahora"), systemImage: "moon.zzz")
@@ -80,19 +93,22 @@ struct ProfileView: View {
         }
         .onChange(of: dreamEnabled) { _, v in ProfileStore.dreamEnabled = v }
         .onChange(of: threshold) { _, v in ProfileStore.threshold = v }
+        .onChange(of: dreamProviderID) { _, _ in dreamModel = selectedProvider?.models.first ?? "" }
         .onAppear {
             profile = ProfileStore.profile
             dreamEnabled = ProfileStore.dreamEnabled
             threshold = ProfileStore.threshold
+            if dreamProviderID.isEmpty { dreamProviderID = providers.first?.id ?? "" }
+            if dreamModel.isEmpty { dreamModel = selectedProvider?.models.first ?? "" }
         }
     }
 
     private func dreamNow() {
-        guard let p = providers.first else {
+        guard let p = selectedProvider else {
             status = T("Add a provider first.", "Añade un provider primero.")
             return
         }
-        let model = p.models.first ?? ""
+        let model = dreamModel.isEmpty ? (p.models.first ?? "") : dreamModel
         guard !model.isEmpty else {
             status = T("Configure a model for this provider.", "Configura un modelo para este provider.")
             return
