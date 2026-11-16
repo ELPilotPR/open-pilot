@@ -111,4 +111,14 @@ final class ChatUXSupportTests: XCTestCase {
         XCTAssertTrue(r.contains("3"))
         XCTAssertTrue(r.contains("60"))   // −60%
     }
+
+    // MARK: - VoiceNoteSupport.level
+
+    func testVoiceLevelNormalize() {
+        XCTAssertEqual(VoiceNoteSupport.level(fromDB: 0), 1, accuracy: 0.001)
+        XCTAssertEqual(VoiceNoteSupport.level(fromDB: -60), 0, accuracy: 0.001)
+        XCTAssertEqual(VoiceNoteSupport.level(fromDB: -30), 0.5, accuracy: 0.001)
+        XCTAssertEqual(VoiceNoteSupport.level(fromDB: -160), 0, accuracy: 0.001)
+        XCTAssertEqual(VoiceNoteSupport.level(fromDB: .nan), 0, accuracy: 0.001)
+    }
 }

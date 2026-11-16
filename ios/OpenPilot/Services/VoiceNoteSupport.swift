@@ -20,4 +20,11 @@ enum VoiceNoteSupport {
     static func messageText(transcript: String) -> String {
         cleanTranscript(transcript)
     }
+
+    /// Normaliza averagePower (dB, -160…0) a 0…1 con suelo -60 dB para el espectro.
+    static func level(fromDB db: Float) -> Float {
+        if db.isNaN { return 0 }
+        let minDb: Float = -60
+        return max(0, min(1, (db - minDb) / -minDb))
+    }
 }

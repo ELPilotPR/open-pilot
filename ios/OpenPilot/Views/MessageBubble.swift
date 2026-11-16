@@ -21,6 +21,9 @@ struct MessageRow: View {
     @State private var appeared = false
     @State private var reasoningExpanded = false
     @State private var sourcesExpanded = false
+    @State private var previewSource: WebSource?
+    @State private var streamText = ""
+    @State private var streamTask: Task<Void, Never>?
     @ObservedObject private var voice = VoiceManager.shared
 
     var body: some View {
@@ -93,7 +96,7 @@ struct MessageRow: View {
                     } else if message.text.isEmpty && message.reasoning.isEmpty && message.weatherData.isEmpty && message.currencyData.isEmpty {
                         TypingIndicator().padding(.vertical, 4)
                     } else if !message.text.isEmpty {
-                        MarkdownView(text: message.text + (isActive ? " ▍" : ""), sources: message.sources)
+                        MarkdownView(text: (isActive ? streamText : message.text) + (isActive ? " ▍" : ""), sources: message.sources)
                             .textSelection(.enabled)
                     }
                     if !message.sources.isEmpty { sourcesView }
@@ -112,6 +115,21 @@ struct MessageRow: View {
                         if !message.text.isEmpty && !isActive { copyButton }
                         if !message.text.isEmpty && !isActive { feedbackButtons }
                     }
+                }
+                .onAppear { streamText = message.text }
+                .onChange(of: message.text) { _, new in
+                    guard isActive else { streamText = new; return }
+                    streamTask?.cancel()
+                    streamTask = Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: 120_000_000)
+                        if !Task.isCancelled { streamText = new }
+                    }
+                }
+                .onChange(of: isActive) { _, active in
+                    if !active { streamTask?.cancel(); streamText = message.text }
+                }
+                .sheet(item: $previewSource) { src in
+                    CitationPreviewCard(source: src)
                 }
             }
         }
@@ -391,13 +409,10 @@ struct MessageRow: View {
     }
 
     private func sourceRow(idx: Int, src: WebSource) -> some View {
-        Group {
-            if let u = URL(string: src.url) {
-                Link(destination: u) { sourceRowContent(idx: idx, src: src) }
-            } else {
-                sourceRowContent(idx: idx, src: src)
-            }
+        Button { previewSource = src } label: {
+            sourceRowContent(idx: idx, src: src)
         }
+        .buttonStyle(.plain)
     }
 
     private func sourceRowContent(idx: Int, src: WebSource) -> some View {

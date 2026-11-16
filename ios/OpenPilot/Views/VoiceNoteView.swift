@@ -14,6 +14,7 @@ struct VoiceNoteView: View {
                     .font(.system(size: 84))
                     .foregroundStyle(rec.isRecording ? OP.danger : OP.accent)
                     .symbolEffect(.pulse, isActive: rec.isRecording)
+                VoiceSpectrum(level: rec.level, active: rec.isRecording)
                 Text(rec.isRecording ? VoiceNoteSupport.formatDuration(rec.elapsed)
                                      : T("Tap record and speak", "Toca grabar y habla"))
                     .font(.title3.monospacedDigit())

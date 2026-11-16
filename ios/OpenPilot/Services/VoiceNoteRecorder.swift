@@ -11,9 +11,11 @@ final class VoiceNoteRecorder: ObservableObject {
     @Published var transcript = ""
     @Published var error: String?
     @Published var elapsed = 0
+    @Published var level: Float = 0
 
     private var recorder: AVAudioRecorder?
     private var timer: Timer?
+    private var meterTimer: Timer?
     private var fileURL: URL?
     private let recognizer = SFSpeechRecognizer(locale: Locale(identifier: "es-ES"))
     private final class ResumeBox { var resumed = false }
@@ -38,10 +40,18 @@ final class VoiceNoteRecorder: ObservableObject {
         ]
         do {
             let r = try AVAudioRecorder(url: url, settings: settings)
+            r.isMeteringEnabled = true
             r.record()
-            recorder = r; fileURL = url; isRecording = true; elapsed = 0
+            recorder = r; fileURL = url; isRecording = true; elapsed = 0; level = 0
             timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
                 Task { @MainActor in self?.elapsed += 1 }
+            }
+            meterTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
+                Task { @MainActor in
+                    guard let self, let rec = self.recorder else { return }
+                    rec.updateMeters()
+                    self.level = VoiceNoteSupport.level(fromDB: rec.averagePower(forChannel: 0))
+                }
             }
         } catch {
             self.error = "No se pudo iniciar la grabación."
@@ -52,6 +62,7 @@ final class VoiceNoteRecorder: ObservableObject {
         guard isRecording else { return }
         recorder?.stop(); recorder = nil
         timer?.invalidate(); timer = nil
+        meterTimer?.invalidate(); meterTimer = nil; level = 0
         isRecording = false
         guard let url = fileURL else { return }
         isProcessing = true
@@ -65,6 +76,7 @@ final class VoiceNoteRecorder: ObservableObject {
     func cancel() {
         recorder?.stop(); recorder = nil
         timer?.invalidate(); timer = nil
+        meterTimer?.invalidate(); meterTimer = nil; level = 0
         isRecording = false; isProcessing = false
         if let u = fileURL { try? FileManager.default.removeItem(at: u); fileURL = nil }
     }
