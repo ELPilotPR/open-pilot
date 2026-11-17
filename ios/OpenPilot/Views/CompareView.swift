@@ -1,7 +1,9 @@
 import SwiftUI
 
 /// Side-by-side model comparison: one shared prompt, one streaming column per
-/// model. Each column can be re-pointed at any configured provider/model.
+/// model. Each column can be re-pointed at any configured provider/model, and
+/// carries its own evidence (time-to-first-token, total time, tok/s, tokens).
+/// Add/remove columns to compare N models; crown the winner. No backend.
 struct CompareView: View {
     @StateObject var compare: ModelCompare
     let providers: [ProviderConfig]
@@ -76,42 +78,82 @@ struct CompareView: View {
                 ForEach($compare.columns) { $col in
                     columnCard($col)
                 }
+                addCard
             }
             .padding(16)
         }
     }
 
+    private var addCard: some View {
+        Button { compare.addColumn(providers: providers) } label: {
+            VStack(spacing: 8) {
+                Image(systemName: "plus.circle.fill").font(.title2)
+                Text(T("Add model", "Añadir modelo")).font(.caption.weight(.medium))
+            }
+            .foregroundStyle(OP.textSecondary)
+            .frame(width: 130, height: 180)
+            .background(OP.elevated)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .overlay(RoundedRectangle(cornerRadius: 16)
+                .stroke(style: StrokeStyle(lineWidth: 1, dash: [5]))
+                .foregroundStyle(OP.border))
+        }
+        .disabled(compare.isRunning)
+        .accessibilityLabel(T("Add model", "Añadir modelo"))
+    }
+
     private func columnCard(_ col: Binding<ModelCompare.Column>) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            header(col)
-            if let err = col.wrappedValue.error {
+        let c = col.wrappedValue
+        let myIndex = compare.columns.firstIndex(where: { $0.id == c.id })
+        let fastTTFT = ModelCompare.fastestTTFT(compare.columns)
+        let fastTPS = ModelCompare.fastestTPS(compare.columns)
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                header(col)
+                Spacer(minLength: 0)
+                Button { compare.pickWinner(id: c.id) } label: {
+                    Image(systemName: c.isWinner ? "crown.fill" : "crown")
+                        .font(.system(size: 13))
+                        .foregroundStyle(c.isWinner ? .yellow : OP.textTertiary)
+                }
+                .accessibilityLabel(T("Pick winner", "Elegir ganador"))
+                if compare.columns.count > 1 {
+                    Button { compare.removeColumn(id: c.id) } label: {
+                        Image(systemName: "minus.circle")
+                            .font(.system(size: 13))
+                            .foregroundStyle(OP.textTertiary)
+                    }
+                    .accessibilityLabel(T("Remove column", "Quitar columna"))
+                }
+            }
+            metricsRow(c, isFastestTTFT: myIndex == fastTTFT, isFastestTPS: myIndex == fastTPS)
+            if let err = c.error {
                 Text(err).font(.caption).foregroundStyle(.red)
             }
             ScrollView {
                 VStack(alignment: .leading, spacing: 6) {
-                    if col.wrappedValue.text.isEmpty {
-                        Text(col.wrappedValue.isStreaming ? T("Thinking…", "Pensando…") : T("Waiting…", "Esperando…"))
+                    if c.text.isEmpty {
+                        Text(c.isStreaming ? T("Thinking…", "Pensando…") : T("Waiting…", "Esperando…"))
                             .font(.callout).foregroundStyle(OP.textTertiary)
                     } else {
-                        MarkdownView(text: col.wrappedValue.text)
+                        MarkdownView(text: c.text)
                     }
-                    if col.wrappedValue.isStreaming {
+                    if c.isStreaming {
                         ProgressView().controlSize(.small)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            if col.wrappedValue.isStreaming, let tps = col.wrappedValue.liveTPS {
-                Text(LiveSpeed.label(tps))
-                    .font(.caption2.monospacedDigit().weight(.semibold))
-                    .foregroundStyle(.orange)
-                    .accessibilityLabel(LiveSpeed.label(tps))
+            if !c.reasoning.isEmpty {
+                DisclosureGroup(T("Reasoning", "Razonamiento")) {
+                    Text(c.reasoning)
+                        .font(.caption)
+                        .foregroundStyle(OP.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .font(.caption)
             }
-            if col.wrappedValue.completionTokens > 0 {
-                Text("≈ \(col.wrappedValue.completionTokens) tokens")
-                    .font(.caption2).foregroundStyle(OP.textTertiary)
-            }
-            let priorRounds = col.wrappedValue.isStreaming ? col.wrappedValue.history : Array(col.wrappedValue.history.dropLast())
+            let priorRounds = c.isStreaming ? c.history : Array(c.history.dropLast())
             if !priorRounds.isEmpty {
                 DisclosureGroup(T("Previous rounds", "Rondas anteriores")) {
                     ForEach(Array(priorRounds.enumerated()), id: \.offset) { i, txt in
@@ -128,7 +170,40 @@ struct CompareView: View {
         .padding(12)
         .background(OP.elevated)
         .clipShape(RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(OP.border, lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 16)
+            .stroke(c.isWinner ? Color.yellow : OP.border, lineWidth: c.isWinner ? 2 : 1))
+    }
+
+    /// Per-column evidence: time-to-first-token, total time, average tok/s and
+    /// prompt/completion token counts. The fastest column gets a green badge.
+    private func metricsRow(_ c: ModelCompare.Column, isFastestTTFT: Bool, isFastestTPS: Bool) -> some View {
+        let tps = ModelCompare.avgTPS(tokens: c.completionTokens, elapsed: c.elapsed) ?? c.liveTPS
+        return VStack(alignment: .leading, spacing: 3) {
+            HStack(spacing: 8) {
+                if let t = c.ttft {
+                    metricChip("bolt.fill", String(format: "%.2fs", t), highlight: isFastestTTFT)
+                }
+                if let e = c.elapsed {
+                    metricChip("clock", String(format: "%.1fs", e), highlight: false)
+                }
+                if let s = tps {
+                    metricChip("speedometer", LiveSpeed.label(s), highlight: isFastestTPS)
+                }
+            }
+            if c.promptTokens > 0 || c.completionTokens > 0 {
+                Text("↑ \(TokenFormat.short(c.promptTokens))  ·  ↓ \(TokenFormat.short(c.completionTokens)) tok")
+                    .font(.caption2.monospacedDigit())
+                    .foregroundStyle(OP.textTertiary)
+            }
+        }
+    }
+
+    private func metricChip(_ icon: String, _ value: String, highlight: Bool) -> some View {
+        HStack(spacing: 3) {
+            Image(systemName: icon).font(.system(size: 9))
+            Text(value).font(.caption2.monospacedDigit().weight(.semibold))
+        }
+        .foregroundStyle(highlight ? Color.green : Color.orange)
     }
 
     private func header(_ col: Binding<ModelCompare.Column>) -> some View {

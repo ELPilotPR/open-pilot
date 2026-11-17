@@ -11,7 +11,7 @@
 [![Platform](https://img.shields.io/badge/platform-iOS%2018%2B-007aff)](https://developer.apple.com/ios/)
 [![Swift](https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white)](https://swift.org)
 [![SwiftUI](https://img.shields.io/badge/UI-SwiftUI-0071e3)](https://developer.apple.com/xcode/swiftui/)
-[![Tests](https://img.shields.io/badge/tests-533%20passing-2ea043)](ios/OpenPilotTests)
+[![Tests](https://img.shields.io/badge/tests-543%20passing-2ea043)](ios/OpenPilotTests)
 [![Backend](https://img.shields.io/badge/backend-none-2ea043)](#privacy--security)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-blueviolet)](#contributing)
 
@@ -59,7 +59,7 @@ What makes it more than a clone: **live tokens/sec**, a **context-window gauge**
 - **Streaming chat** with a live typing cursor over any OpenAI-compatible endpoint or Anthropic.
 - **Background continuation** — switch apps mid-answer and generation keeps running for iOS's background grace period instead of being cut off immediately.
 - **Multiple providers & models** — add endpoints + keys in Settings, switch per chat; a **model picker** with capability presets (vision, reasoning), manual entry and server model discovery.
-- **Model comparison** — one prompt to several models at once, streaming answers side by side, each column re-pointable.
+- **Model comparison (N-way)** — one prompt to as many models as you want, streaming side by side, each column re-pointable. Per-column **evidence**: time-to-first-token, total time, average tok/s and ↑prompt/↓completion tokens, with the fastest highlighted. **Crown a winner**, add/remove columns on the fly, and expand each column's **reasoning**. Optional multi-round **debate** (1–4).
 - **Edit & resend with version branches** (`< 1/2 >`), regenerate, **Continue** a truncated answer, smart titles, 👍/👎 feedback.
 - **Reply / quote threading**, per-conversation **drafts**, and an **outline** that lists your turns and jumps to any message.
 
@@ -111,6 +111,7 @@ What makes it more than a clone: **live tokens/sec**, a **context-window gauge**
 - **Web search relevance on follow-ups** — the first search in a chat worked, but later "search the same / another thing" turns searched the bare message and returned unrelated pages. Queries now resolve against the conversation topic (anaphora like "the same" reuses the prior query; short follow-ups are augmented with it), and social/image boards (Pinterest, Instagram, Facebook, TikTok, X) are filtered out.
 - **Generation no longer stops when you leave the app** — a background-task assertion keeps the stream alive for iOS's background grace period and the SSE session uses extended background idle mode, so switching apps mid-answer no longer interrupts it immediately. (iOS still caps total background time; very long answers may pause once the window expires.)
 - **Real context-window auto-detection** — per-model catalog plus an active server probe (the **Detect from server** button) reads the true window from OpenAI-compatible servers, including Qwen Cloud's 1M.
+- **Model comparison upgraded** — columns now show time-to-first-token, total time, average tok/s and prompt/completion token counts (fastest highlighted); add/remove columns to compare N models, crown a winner, and read each model's reasoning. All on-device, no backend.
 
 ## Providers
 
@@ -165,7 +166,7 @@ ios/
     ViewModels/          chat orchestration
     Views/               SwiftUI screens (chat, canvas, compare, settings, onboarding…)
     Resources/           bundled mermaid.js (offline diagrams)
-  OpenPilotTests/        XCTest suite (533 tests)
+  OpenPilotTests/        XCTest suite (543 tests)
   ShareExtension/  WidgetExtension/  KeyboardExtension/   (App Group capabilities)
 docs/                    feature inventory, privacy policy, screenshots
 ```
@@ -178,7 +179,7 @@ Read the full [privacy policy](https://elpilotpr.github.io/open-pilot/privacy-po
 
 ## Testing
 
-An **XCTest suite (533 tests)** covers the version tree, model catalog, custom instructions, file/office parsing, citations, Canvas helpers, projects, memory, personas, feedback, temporary chat, in-conversation search, LaTeX parsing, export/import round-trips, prompt slash matching, JavaScript sandbox execution, CSV parsing, context compaction & budgeting, Canvas preview building, model-comparison logic, the chat outline, voice selection/barge-in logic, and web-search query cleaning & relevance ranking, and context-aware follow-up search queries.
+An **XCTest suite (543 tests)** covers the version tree, model catalog, custom instructions, file/office parsing, citations, Canvas helpers, projects, memory, personas, feedback, temporary chat, in-conversation search, LaTeX parsing, export/import round-trips, prompt slash matching, JavaScript sandbox execution, CSV parsing, context compaction & budgeting, Canvas preview building, model-comparison logic & metrics (time-to-first-token, tok/s, tokens), N-way columns and winner selection, the chat outline, voice selection/barge-in logic, and web-search query cleaning & relevance ranking, and context-aware follow-up search queries.
 
 ```bash
 cd ios

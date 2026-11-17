@@ -18,6 +18,10 @@ final class ModelCompare: ObservableObject {
         var completionTokens = 0
         var history: [String] = []      // answer per completed debate round
         var liveTPS: Double? = nil      // live tokens/sec while streaming
+        var promptTokens = 0
+        var ttft: TimeInterval? = nil   // time to first token (s)
+        var elapsed: TimeInterval? = nil // total streaming time (s)
+        var isWinner = false            // human-picked winner
     }
 
     @Published var columns: [Column]
@@ -42,7 +46,7 @@ final class ModelCompare: ObservableObject {
         switch event {
         case .delta(let d):        column.text += d
         case .reasoning(let r):    column.reasoning += r
-        case .usage(_, let c):     column.completionTokens = c
+        case .usage(let p, let c): column.promptTokens = p; column.completionTokens = c
         case .done:                column.isStreaming = false
         }
     }
@@ -67,6 +71,48 @@ final class ModelCompare: ObservableObject {
     /// prompt; later rounds feed each model the others' previous answers so they
     /// debate (critique + refine). Each child task hops to the main actor, so
     /// column mutations are serialised and safe. Live tok/s is sampled per column.
+    /// Average tok/s over the whole answer; nil without timing or tokens.
+    nonisolated static func avgTPS(tokens: Int, elapsed: TimeInterval?) -> Double? {
+        guard let e = elapsed, e > 0.05, tokens > 0 else { return nil }
+        return Double(tokens) / e
+    }
+
+    /// Index of the column with the smallest time-to-first-token (nil ignored).
+    nonisolated static func fastestTTFT(_ columns: [Column]) -> Int? {
+        var best: Int? = nil
+        var bestVal = Double.greatestFiniteMagnitude
+        for (i, c) in columns.enumerated() {
+            if let t = c.ttft, t < bestVal { bestVal = t; best = i }
+        }
+        return best
+    }
+
+    /// Index of the column with the highest average tok/s.
+    nonisolated static func fastestTPS(_ columns: [Column]) -> Int? {
+        var best: Int? = nil
+        var bestVal = 0.0
+        for (i, c) in columns.enumerated() {
+            if let t = avgTPS(tokens: c.completionTokens, elapsed: c.elapsed), t > bestVal { bestVal = t; best = i }
+        }
+        return best
+    }
+
+    /// Next column to add: first provider/model combo not already present, else a
+    /// duplicate of the first available provider so the user can re-point it.
+    nonisolated static func nextColumn(providers: [ProviderConfig], existing: [Column]) -> Column? {
+        let used = Set(existing.map { "\($0.providerID)|\($0.model)" })
+        for p in providers {
+            let models = p.models.isEmpty ? [""] : p.models
+            for m in models where !used.contains("\(p.id)|\(m)") {
+                return Column(providerID: p.id, model: m, label: p.name)
+            }
+        }
+        if let p = providers.first {
+            return Column(providerID: p.id, model: p.models.first ?? "", label: p.name)
+        }
+        return nil
+    }
+
     func run(providers: [ProviderConfig]) {
         let p = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !p.isEmpty, !isRunning, !columns.isEmpty else { return }
@@ -82,6 +128,9 @@ final class ModelCompare: ObservableObject {
                     self.columns[i].reasoning = ""
                     self.columns[i].error = nil
                     self.columns[i].completionTokens = 0
+                    self.columns[i].promptTokens = 0
+                    self.columns[i].ttft = nil
+                    self.columns[i].elapsed = nil
                     self.columns[i].liveTPS = nil
                     self.columns[i].isStreaming = true
                 }
@@ -106,11 +155,16 @@ final class ModelCompare: ObservableObject {
                             let base = prov.baseURL, key = prov.apiKey, model = col.model
                             let start = Date()
                             var lastTick = Date.distantPast
+                            var gotFirst = false
                             do {
                                 for try await ev in client.stream(turns: turns, model: model, baseURL: base, apiKey: key) {
                                     Self.apply(ev, to: &self.columns[idx])
                                     if case .delta = ev {
                                         let now = Date()
+                                        if !gotFirst {
+                                            gotFirst = true
+                                            self.columns[idx].ttft = now.timeIntervalSince(start)
+                                        }
                                         if now.timeIntervalSince(lastTick) >= 0.25 {
                                             lastTick = now
                                             let toks = LiveSpeed.estimateTokens(self.columns[idx].text)
@@ -119,7 +173,9 @@ final class ModelCompare: ObservableObject {
                                         }
                                     }
                                 }
+                                self.columns[idx].elapsed = Date().timeIntervalSince(start)
                             } catch {
+                                self.columns[idx].elapsed = Date().timeIntervalSince(start)
                                 self.columns[idx].error = error.localizedDescription
                             }
                             self.columns[idx].isStreaming = false
@@ -131,5 +187,21 @@ final class ModelCompare: ObservableObject {
             }
             self.isRunning = false
         }
+    }
+
+    func addColumn(providers: [ProviderConfig]) {
+        guard let c = ModelCompare.nextColumn(providers: providers, existing: columns) else { return }
+        columns.append(c)
+    }
+
+    func removeColumn(id: UUID) {
+        guard columns.count > 1 else { return }
+        columns.removeAll { $0.id == id }
+    }
+
+    /// Single-winner toggle: tapping the crowned column clears it; tapping another moves the crown.
+    func pickWinner(id: UUID) {
+        let already = columns.first(where: { $0.id == id })?.isWinner ?? false
+        for i in columns.indices { columns[i].isWinner = (columns[i].id == id) && !already }
     }
 }
