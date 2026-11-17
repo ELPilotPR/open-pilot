@@ -1583,6 +1583,12 @@ struct ChatView: View {
                 Text(live.heard.isEmpty ? "…" : live.heard)
                     .font(.body).foregroundStyle(.white.opacity(0.8))
                     .multilineTextAlignment(.center).padding(.horizontal, 32).lineLimit(6)
+                if let ve = voice.voiceError {
+                    Text(ve).font(.footnote).foregroundStyle(.orange)
+                        .multilineTextAlignment(.center).padding(.horizontal, 32)
+                }
+                LanguageToggle(compact: true)
+                    .accessibilityLabel(T("Spoken language", "Idioma hablado"))
                 Spacer()
                 Button { live.stop() } label: {
                     Image(systemName: "xmark").font(.system(size: 22, weight: .bold))
@@ -1593,6 +1599,9 @@ struct ChatView: View {
                 Text(T("Tap to end", "Toca para terminar")).font(.caption).foregroundStyle(.white.opacity(0.6))
                 Spacer().frame(height: 40)
             }
+        }
+        .onChange(of: LanguageManager.shared.current) { _, _ in
+            if live.isActive && live.phase == .listening { live.restartListening() }
         }
     }
 

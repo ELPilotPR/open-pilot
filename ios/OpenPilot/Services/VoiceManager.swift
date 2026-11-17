@@ -15,7 +15,11 @@ final class VoiceManager: NSObject, ObservableObject, AVSpeechSynthesizerDelegat
     @Published var isListening = false
     @Published var liveTranscript = ""
     @Published var voiceError: String?
-    private let recognizer = SFSpeechRecognizer(locale: Locale(identifier: "es-ES"))
+    /// Locale del recognizer según el idioma activo de la app (igual que el TTS).
+    /// Puro y testeable: el dictado debe reconocer el idioma que se habla, no uno fijo.
+    nonisolated static func recognizerIdentifier(for lang: AppLang) -> String {
+        lang == .es ? "es-ES" : "en-US"
+    }
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var task: SFSpeechRecognitionTask?
     private let engine = AVAudioEngine()
@@ -57,6 +61,7 @@ final class VoiceManager: NSObject, ObservableObject, AVSpeechSynthesizerDelegat
             voiceError = "Permiso de micrófono denegado. Actívalo en Ajustes → Open Pilot."
             return
         }
+        let recognizer = SFSpeechRecognizer(locale: Locale(identifier: Self.recognizerIdentifier(for: LanguageManager.shared.current)))
         guard let recognizer, recognizer.isAvailable else {
             voiceError = "El reconocimiento de voz no está disponible ahora."
             return
@@ -80,7 +85,8 @@ final class VoiceManager: NSObject, ObservableObject, AVSpeechSynthesizerDelegat
         }
         let req = SFSpeechAudioBufferRecognitionRequest()
         req.shouldReportPartialResults = true
-        if recognizer.supportsOnDeviceRecognition { req.requiresOnDeviceRecognition = true }
+        // No forzamos on-device: si el asset del idioma no está descargado, forzarlo
+        // hace fallar la tarea en silencio. iOS usa on-device cuando está disponible.
         request = req
         let input = engine.inputNode
         try? input.setVoiceProcessingEnabled(true)   // echo cancellation (barge-in)
@@ -101,7 +107,13 @@ final class VoiceManager: NSObject, ObservableObject, AVSpeechSynthesizerDelegat
             Task { @MainActor in
                 guard let self else { return }
                 if let result { self.liveTranscript = result.bestTranscription.formattedString }
-                if error != nil || (result?.isFinal ?? false) { self.stopDictation() }
+                if let error {
+                    // Reporta solo si seguimos escuchando (no en cancelaciones intencionadas).
+                    if self.isListening { self.voiceError = "No se pudo transcribir el audio. Revisa el idioma y el micrófono." }
+                    self.stopDictation()
+                } else if result?.isFinal ?? false {
+                    self.stopDictation()
+                }
             }
         }
     }

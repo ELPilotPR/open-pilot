@@ -48,4 +48,10 @@ final class VoiceTests: XCTestCase {
         VoiceSettings.identifier = savedID
         VoiceSettings.bargeIn = savedBarge
     }
+
+    // MARK: - Regression: el dictado sigue el idioma de la app (no es-ES fijo)
+    func testRecognizerLocaleFollowsAppLanguage() {
+        XCTAssertEqual(VoiceManager.recognizerIdentifier(for: .en), "en-US")
+        XCTAssertEqual(VoiceManager.recognizerIdentifier(for: .es), "es-ES")
+    }
 }

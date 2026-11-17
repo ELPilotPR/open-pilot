@@ -11,7 +11,7 @@
 [![Platform](https://img.shields.io/badge/platform-iOS%2018%2B-007aff)](https://developer.apple.com/ios/)
 [![Swift](https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white)](https://swift.org)
 [![SwiftUI](https://img.shields.io/badge/UI-SwiftUI-0071e3)](https://developer.apple.com/xcode/swiftui/)
-[![Tests](https://img.shields.io/badge/tests-543%20passing-2ea043)](ios/OpenPilotTests)
+[![Tests](https://img.shields.io/badge/tests-544%20passing-2ea043)](ios/OpenPilotTests)
 [![Backend](https://img.shields.io/badge/backend-none-2ea043)](#privacy--security)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-blueviolet)](#contributing)
 
@@ -83,7 +83,7 @@ What makes it more than a clone: **live tokens/sec**, a **context-window gauge**
 - **Image generation, editing & variations** (image-to-image) on providers that support it.
 
 ### Voice
-- **Dictation** with on-device speech recognition; **read replies aloud** with a pickable device voice.
+- **Dictation** in English or Spanish (follows the app language; on-device recognition when available); **read replies aloud** with a pickable device voice.
 - **Live voice mode** — continuous hands-free listen → reply → listen with **barge-in** (interrupt by speaking) and a **live audio spectrum**.
 
 ### Attachments
@@ -112,6 +112,7 @@ What makes it more than a clone: **live tokens/sec**, a **context-window gauge**
 - **Generation no longer stops when you leave the app** — a background-task assertion keeps the stream alive for iOS's background grace period and the SSE session uses extended background idle mode, so switching apps mid-answer no longer interrupts it immediately. (iOS still caps total background time; very long answers may pause once the window expires.)
 - **Real context-window auto-detection** — per-model catalog plus an active server probe (the **Detect from server** button) reads the true window from OpenAI-compatible servers, including Qwen Cloud's 1M.
 - **Model comparison upgraded** — columns now show time-to-first-token, total time, average tok/s and prompt/completion token counts (fastest highlighted); add/remove columns to compare N models, crown a winner, and read each model's reasoning. All on-device, no backend.
+- **Voice mode works in English and Spanish** — dictation now follows the app language instead of a fixed Spanish recognizer, recognition no longer fails silently when the on-device language asset is missing, errors are shown in the voice overlay, and the listen loop no longer spins without feedback. A language toggle in the overlay switches the spoken language on the fly.
 
 ## Providers
 
@@ -166,7 +167,7 @@ ios/
     ViewModels/          chat orchestration
     Views/               SwiftUI screens (chat, canvas, compare, settings, onboarding…)
     Resources/           bundled mermaid.js (offline diagrams)
-  OpenPilotTests/        XCTest suite (543 tests)
+  OpenPilotTests/        XCTest suite (544 tests)
   ShareExtension/  WidgetExtension/  KeyboardExtension/   (App Group capabilities)
 docs/                    feature inventory, privacy policy, screenshots
 ```
@@ -179,7 +180,7 @@ Read the full [privacy policy](https://elpilotpr.github.io/open-pilot/privacy-po
 
 ## Testing
 
-An **XCTest suite (543 tests)** covers the version tree, model catalog, custom instructions, file/office parsing, citations, Canvas helpers, projects, memory, personas, feedback, temporary chat, in-conversation search, LaTeX parsing, export/import round-trips, prompt slash matching, JavaScript sandbox execution, CSV parsing, context compaction & budgeting, Canvas preview building, model-comparison logic & metrics (time-to-first-token, tok/s, tokens), N-way columns and winner selection, the chat outline, voice selection/barge-in logic, and web-search query cleaning & relevance ranking, and context-aware follow-up search queries.
+An **XCTest suite (544 tests)** covers the version tree, model catalog, custom instructions, file/office parsing, citations, Canvas helpers, projects, memory, personas, feedback, temporary chat, in-conversation search, LaTeX parsing, export/import round-trips, prompt slash matching, JavaScript sandbox execution, CSV parsing, context compaction & budgeting, Canvas preview building, model-comparison logic & metrics (time-to-first-token, tok/s, tokens), N-way columns and winner selection, the chat outline, voice selection/barge-in logic, and web-search query cleaning & relevance ranking, and context-aware follow-up search queries.
 
 ```bash
 cd ios
