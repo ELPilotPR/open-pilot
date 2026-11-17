@@ -64,7 +64,9 @@ final class OpenAICompatibleProvider: ChatProvider {
             }
 
             let delegate = SSEDelegate(continuation: continuation)
-            let session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
+            let config = URLSessionConfiguration.default
+            config.shouldUseExtendedBackgroundIdleMode = true
+            let session = URLSession(configuration: config, delegate: delegate, delegateQueue: nil)
             let task = session.dataTask(with: req)
             delegate.task = task
             continuation.onTermination = { _ in

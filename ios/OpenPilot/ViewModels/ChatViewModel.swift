@@ -76,6 +76,9 @@ final class ChatViewModel: ObservableObject {
                                 images: (m.role == "user" && !m.imageData.isEmpty) ? [m.imageData] : [])
             }
 
+        let userTexts = conversation.activeMessages.filter { $0.role == "user" }.map { $0.text }
+        let previousUserText = userTexts.count >= 2 ? userTexts[userTexts.count - 2] : nil
+
         let prov = ProviderFactory.make(kind: provider.kind)
         let model = VisionRouting.effectiveModel(current: conversation.model, hasImage: hasImage,
                                                  kind: provider.kind, baseURL: provider.baseURL)
@@ -88,6 +91,7 @@ final class ChatViewModel: ObservableObject {
         isStreaming = true
         task = Task { [weak self] in
             guard let self else { return }
+            BackgroundTaskKeeper.begin()
             var turns = history
             if ContextSettings.autoCompact {
                 let plan = ContextManager.compact(turns, budget: ContextManager.effectiveBudget(window: ctxWindow, manual: ContextSettings.budgetTokens))
@@ -137,14 +141,15 @@ final class ChatViewModel: ObservableObject {
                     }
                 } else if browse {
                     self.statusText = T("Searching the web…", "Buscando en la web…")
-                    let sources = await WebSearchService.enriched(query: userText, limit: 5)
+                    let searchQuery = WebSearchService.contextualQuery(raw: userText, previousUserText: previousUserText, isFirstTurn: isFirstTurn)
+                    let sources = await WebSearchService.enriched(query: searchQuery, limit: 5)
                     assistant.sources = sources
                     if sources.isEmpty {
                         self.statusText = T("No results; answering without sources…", "Sin resultados; respondo sin fuentes…")
                     } else {
                         self.statusText = T("Reading \(sources.count) sources…", "Leyendo \(sources.count) fuentes…")
                         turns.insert(ChatTurn(role: "system",
-                                              content: WebSearchService.contextBlock(query: userText, sources: sources)),
+                                              content: WebSearchService.contextBlock(query: searchQuery, sources: sources)),
                                      at: 0)
                     }
                     try? context.save()
@@ -212,6 +217,7 @@ final class ChatViewModel: ObservableObject {
                 }
             }
             LiveActivityController.shared.end()
+            BackgroundTaskKeeper.end()
             self.statusText = nil
             self.liveTPS = 0
             try? context.save()
@@ -564,6 +570,7 @@ final class ChatViewModel: ObservableObject {
 
     func stop() {
         task?.cancel()
+        BackgroundTaskKeeper.end()
         isStreaming = false
         statusText = nil
     }

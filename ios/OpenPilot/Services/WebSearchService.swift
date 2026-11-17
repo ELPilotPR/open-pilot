@@ -129,6 +129,30 @@ enum WebSearchService {
         return s.isEmpty ? fallback : s
     }
 
+    /// Query de búsqueda consciente del chat. En follow-ups, si la petición es
+    /// anafórica ("busca lo mismo", "eso") o muy corta/ambigua (≤2 términos), la
+    /// combina con el tema del turno anterior. Sin esto, "búscame los secundarios"
+    /// en un chat sobre Bob Esponja buscaría la palabra pelada y traería páginas random.
+    static func contextualQuery(raw: String, previousUserText: String?, isFirstTurn: Bool) -> String {
+        let q = cleanQuery(raw)
+        guard !isFirstTurn, let prev = previousUserText, !prev.isEmpty else { return q }
+        let prevQ = cleanQuery(prev)
+        let prevTerms = Set(queryTerms(prevQ))
+        let qTerms = queryTerms(q)
+        let low = raw.lowercased()
+        let anaphora = ["lo mismo", "los mismos", "las mismas", "lo anterior", "lo de antes",
+                        "de eso", "de esto", "eso", "esto", "igual", "the same", "that again"]
+        let isAnaphoric = anaphora.contains { low.contains($0) }
+        let newTerms = qTerms.filter { !prevTerms.contains($0) }
+        if isAnaphoric {
+            return newTerms.isEmpty ? prevQ : prevQ + " " + newTerms.joined(separator: " ")
+        }
+        if qTerms.count <= 2 {
+            return newTerms.isEmpty ? prevQ : prevQ + " " + newTerms.joined(separator: " ")
+        }
+        return q
+    }
+
     // MARK: - Relevancia + deduplicacion
 
     /// Palabras significativas de la query (minusculas, sin stopwords, longitud >= 3).
@@ -136,7 +160,8 @@ enum WebSearchService {
         let stop: Set<String> = ["de", "la", "el", "los", "las", "un", "una", "unos", "unas",
                                  "y", "o", "en", "del", "al", "para", "por", "con", "su", "sus",
                                  "the", "a", "an", "of", "for", "and", "or", "in", "on", "to",
-                                 "is", "are", "what", "which", "how", "much", "best", "mejor"]
+                                 "is", "are", "what", "which", "how", "much", "best", "mejor",
+                                 "mismo", "misma", "mismos", "mismas", "eso", "esto", "esos", "esas", "estos", "estas", "igual", "anterior"]
         return query.lowercased()
             .components(separatedBy: CharacterSet.alphanumerics.inverted)
             .filter { $0.count >= 3 && !stop.contains($0) }
@@ -162,8 +187,11 @@ enum WebSearchService {
         }
         func isJunk(_ s: WebSource) -> Bool {
             let u = s.url.lowercased()
-            return !u.hasPrefix("http") || u.contains("duckduckgo.com") || u.contains("bing.com")
-                || u.contains("google.com/search") || u.contains("youtube.com/results")
+            if !u.hasPrefix("http") || u.contains("duckduckgo.com") || u.contains("bing.com")
+                || u.contains("google.com/search") || u.contains("youtube.com/results") { return true }
+            let host = URL(string: s.url)?.host?.lowercased() ?? ""
+            let social = ["pinterest.com", "instagram.com", "facebook.com", "tiktok.com", "twitter.com", "x.com"]
+            return social.contains { host == $0 || host.hasSuffix("." + $0) }
         }
         var best: [String: WebSource] = [:]
         var order: [String] = []
