@@ -1,10 +1,12 @@
 import SwiftUI
 import SwiftData
+import UniformTypeIdentifiers
 
 struct SettingsView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \ProviderConfig.createdAt) private var providers: [ProviderConfig]
+    @Query private var conversations: [Conversation]
     @AppStorage("imageModel") private var imageModel = "dall-e-3"
     @AppStorage("responseStyle") private var responseStyle = "conciso"
     @AppStorage("appearanceMode") private var appearanceMode = "auto"
@@ -17,6 +19,14 @@ struct SettingsView: View {
     @AppStorage("hapticsEnabled") private var hapticsEnabled = true
     @State private var showVoicePicker = false
     @State private var showIntro = false
+    @State private var backupShare: SharePayload?
+    @State private var showBackupImport = false
+    @State private var backupError: String?
+    @State private var showBackupError = false
+    @State private var pendingBackup: Backup.Bundle?
+    @State private var showRestoreConfirm = false
+    @State private var restoreMessage: String?
+    @State private var showRestoreDone = false
 
     var body: some View {
         List {
@@ -244,6 +254,19 @@ struct SettingsView: View {
             }
 
             Section {
+                Button { exportBackup() } label: {
+                    Label(T("Export backup", "Exportar respaldo"), systemImage: "square.and.arrow.up")
+                }
+                Button { showBackupImport = true } label: {
+                    Label(T("Import backup", "Importar respaldo"), systemImage: "square.and.arrow.down")
+                }
+            } header: {
+                Text(T("Backup", "Respaldo"))
+            } footer: {
+                Text(T("All chats and provider settings in one JSON file. API keys are never included (they stay in this device's Keychain). Temporary chats are excluded.", "Todos los chats y ajustes de proveedores en un archivo JSON. Las API keys nunca se incluyen (se quedan en el Keychain de este dispositivo). Los chats temporales se excluyen."))
+            }
+
+            Section {
                 Button { showIntro = true } label: {
                     Label(T("View intro", "Ver introducción"), systemImage: "sparkles")
                 }
@@ -264,6 +287,27 @@ struct SettingsView: View {
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showVoicePicker) { VoicePickerView() }
         .sheet(isPresented: $showIntro) { OnboardingView { showIntro = false } }
+        .sheet(item: $backupShare) { payload in ShareSheet(items: payload.items) }
+        .fileImporter(isPresented: $showBackupImport, allowedContentTypes: [.json], allowsMultipleSelection: false) { result in
+            handleBackupImport(result)
+        }
+        .alert(T("Backup failed", "Respaldo fallido"), isPresented: $showBackupError) {
+            Button(T("OK", "Aceptar"), role: .cancel) {}
+        } message: {
+            Text(backupError ?? "")
+        }
+        .confirmationDialog(T("Restore backup", "Restaurar respaldo"), isPresented: $showRestoreConfirm, titleVisibility: .visible) {
+            Button(T("Add to existing chats", "Añadir a los chats existentes")) { restoreBackup(replace: false) }
+            Button(T("Replace all chats", "Reemplazar todos los chats"), role: .destructive) { restoreBackup(replace: true) }
+            Button(T("Cancel", "Cancelar"), role: .cancel) { pendingBackup = nil }
+        } message: {
+            Text(T("Replace deletes every current chat before restoring. Add keeps your chats and imports copies.", "Reemplazar borra todos los chats actuales antes de restaurar. Añadir conserva tus chats e importa copias."))
+        }
+        .alert(T("Restore complete", "Restauración completa"), isPresented: $showRestoreDone) {
+            Button(T("OK", "Aceptar"), role: .cancel) {}
+        } message: {
+            Text(restoreMessage ?? "")
+        }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button(T("Done", "Listo")) { dismiss() }
@@ -305,5 +349,50 @@ struct SettingsView: View {
             context.delete(p)
         }
         try? context.save()
+    }
+
+    // MARK: - Respaldo completo
+
+    private func exportBackup() {
+        do {
+            let bundle = Backup.bundle(conversations: conversations, providers: providers)
+            let data = try Backup.jsonData(bundle)
+            let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"
+            let url = FileManager.default.temporaryDirectory
+                .appendingPathComponent("openpilot-backup-\(df.string(from: Date())).json")
+            try data.write(to: url, options: .atomic)
+            backupShare = SharePayload(items: [url])
+        } catch {
+            backupError = error.localizedDescription
+            showBackupError = true
+        }
+    }
+
+    private func handleBackupImport(_ result: Result<[URL], Error>) {
+        switch result {
+        case .success(let urls):
+            guard let url = urls.first else { return }
+            let ok = url.startAccessingSecurityScopedResource()
+            defer { if ok { url.stopAccessingSecurityScopedResource() } }
+            do {
+                let data = try Data(contentsOf: url)
+                pendingBackup = try Backup.decode(data)
+                showRestoreConfirm = true
+            } catch {
+                backupError = error.localizedDescription
+                showBackupError = true
+            }
+        case .failure(let error):
+            backupError = error.localizedDescription
+            showBackupError = true
+        }
+    }
+
+    private func restoreBackup(replace: Bool) {
+        guard let bundle = pendingBackup else { return }
+        let r = Backup.restore(bundle, into: context, replace: replace)
+        pendingBackup = nil
+        restoreMessage = T("\(r.conversations) chats · \(r.providers) new providers", "\(r.conversations) chats · \(r.providers) proveedores nuevos")
+        showRestoreDone = true
     }
 }

@@ -11,7 +11,7 @@
 [![Platform](https://img.shields.io/badge/platform-iOS%2018%2B-007aff)](https://developer.apple.com/ios/)
 [![Swift](https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white)](https://swift.org)
 [![SwiftUI](https://img.shields.io/badge/UI-SwiftUI-0071e3)](https://developer.apple.com/xcode/swiftui/)
-[![Tests](https://img.shields.io/badge/tests-601%20passing-2ea043)](ios/OpenPilotTests)
+[![Tests](https://img.shields.io/badge/tests-611%20passing-2ea043)](ios/OpenPilotTests)
 [![Backend](https://img.shields.io/badge/backend-none-2ea043)](#privacy--security)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-blueviolet)](#contributing)
 
@@ -110,6 +110,11 @@ What makes it more than a clone: **live tokens/sec**, a **context-window gauge**
 - **Compare presets** — save named model matchups and reload them from the bookmark menu in the comparator.
 - **Conversation branching** — long-press any message and choose **Branch in new chat** to fork the active path up to that point into a fresh, independent chat; the original stays untouched.
 - **Usage badges** — each chat in the sidebar shows its total tokens and estimated cost (or **Local** for on-device/LAN models), with full VoiceOver labels.
+- **Full backup** — export every chat and provider setup to one portable JSON file and restore it on any device (replace or merge). API keys never leave the Keychain.
+
+### New in 1.0.6
+- **Full backup & restore** — Settings → Backup exports all chats (pins, archives, tags and the full version tree) plus provider metadata to a single JSON file; import restores with **Replace** (wipe current chats) or **Add** (merge copies). Temporary chats are excluded and API keys are never written to the file.
+- **611 tests passing** (was 601).
 
 ### New in 1.0.5
 - **Usage badges per chat** — the sidebar shows total tokens and estimated USD cost (or **Local**) under each conversation title, computed from the active path. Empty chats stay compact.
@@ -192,7 +197,7 @@ ios/
     ViewModels/          chat orchestration
     Views/               SwiftUI screens (chat, canvas, compare, settings, onboarding…)
     Resources/           bundled mermaid.js (offline diagrams)
-  OpenPilotTests/        XCTest suite (601 tests)
+  OpenPilotTests/        XCTest suite (611 tests)
   ShareExtension/  WidgetExtension/  KeyboardExtension/   (App Group capabilities)
 docs/                    feature inventory, privacy policy, screenshots
 ```
@@ -205,7 +210,7 @@ Read the full [privacy policy](https://elpilotpr.github.io/open-pilot/privacy-po
 
 ## Testing
 
-An **XCTest suite (601 tests)** covers the version tree, model catalog, custom instructions, file/office parsing, citations, Canvas helpers, projects, memory, personas, feedback, temporary chat, in-conversation search, LaTeX parsing, export/import round-trips, prompt slash matching, JavaScript sandbox execution, CSV parsing, context compaction & budgeting, Canvas preview building, model-comparison logic & metrics (time-to-first-token, tok/s, tokens), N-way columns and winner selection, the chat outline, voice selection/barge-in logic, and web-search query cleaning & relevance ranking, and context-aware follow-up search queries.
+An **XCTest suite (611 tests)** covers the version tree, model catalog, custom instructions, file/office parsing, citations, Canvas helpers, projects, memory, personas, feedback, temporary chat, in-conversation search, LaTeX parsing, export/import round-trips, prompt slash matching, JavaScript sandbox execution, CSV parsing, context compaction & budgeting, Canvas preview building, model-comparison logic & metrics (time-to-first-token, tok/s, tokens), N-way columns and winner selection, the chat outline, voice selection/barge-in logic, and web-search query cleaning & relevance ranking, and context-aware follow-up search queries.
 
 ```bash
 cd ios
