@@ -111,6 +111,11 @@ What makes it more than a clone: **live tokens/sec**, a **context-window gauge**
 - **Conversation branching** — long-press any message and choose **Branch in new chat** to fork the active path up to that point into a fresh, independent chat; the original stays untouched.
 - **Usage badges** — each chat in the sidebar shows its total tokens and estimated cost (or **Local** for on-device/LAN models), with full VoiceOver labels.
 - **Full backup** — export every chat and provider setup to one portable JSON file and restore it on any device (replace or merge). API keys never leave the Keychain.
+- **Usage badge toggle** — show or hide the per-chat tokens & cost badges from Settings → Appearance.
+
+### New in 1.0.7
+- **Usage badge toggle** — a new switch in Settings → Appearance shows or hides the per-chat tokens & cost badges in the sidebar; the choice is remembered.
+- Pricing stays an estimate from a built-in rate table (local/LAN models show **Local**); providers without a pricing API can't be auto-fetched.
 
 ### New in 1.0.6
 - **Full backup & restore** — Settings → Backup exports all chats (pins, archives, tags and the full version tree) plus provider metadata to a single JSON file; import restores with **Replace** (wipe current chats) or **Add** (merge copies). Temporary chats are excluded and API keys are never written to the file.

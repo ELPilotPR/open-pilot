@@ -12,6 +12,7 @@ struct SidebarView: View {
     @Query(sort: \Conversation.createdAt, order: .reverse) private var conversations: [Conversation]
     @Query(sort: \Project.createdAt) private var projects: [Project]
     @Query private var providers: [ProviderConfig]
+    @AppStorage("showUsageBadges") private var showUsageBadges = true
     @State private var search = ""
     @State private var sharePayload: SharePayload?
     @State private var renamingConv: Conversation?
@@ -228,7 +229,7 @@ struct SidebarView: View {
                         .lineLimit(1).font(.subheadline).foregroundStyle(OP.textPrimary)
                     Spacer(minLength: 0)
                 }
-                if let badge = usageBadge(conv) {
+                if showUsageBadges, let badge = usageBadge(conv) {
                     HStack(spacing: 5) {
                         Text(badge.tokens)
                         if !badge.cost.isEmpty {

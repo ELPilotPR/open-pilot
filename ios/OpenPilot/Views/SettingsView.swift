@@ -10,6 +10,7 @@ struct SettingsView: View {
     @AppStorage("imageModel") private var imageModel = "dall-e-3"
     @AppStorage("responseStyle") private var responseStyle = "conciso"
     @AppStorage("appearanceMode") private var appearanceMode = "auto"
+    @AppStorage("showUsageBadges") private var showUsageBadges = true
     @AppStorage("accentColor") private var accentColor = "blue"
     @AppStorage("customInstructionsEnabled") private var ciEnabled = true
     @AppStorage("customAboutYou") private var ciAbout = ""
@@ -53,6 +54,7 @@ struct SettingsView: View {
                     AccentSwatchPicker(selection: $accentColor)
                 }
                 .padding(.vertical, 2)
+                Toggle(T("Show usage & cost badges", "Mostrar consumo y coste"), isOn: $showUsageBadges)
             } header: {
                 Text(T("Appearance", "Apariencia"))
             } footer: {
