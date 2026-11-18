@@ -41,8 +41,8 @@ targets:
       path: OpenPilot/Info.plist
       properties:
         CFBundleDisplayName: Open Pilot
-        CFBundleShortVersionString: "1.0.9"
-        CFBundleVersion: "10"
+        CFBundleShortVersionString: "1.0.10"
+        CFBundleVersion: "11"
         ITSAppUsesNonExemptEncryption: false
         NSSupportsLiveActivities: true
         CFBundleURLTypes:
@@ -91,8 +91,8 @@ targets:
       path: ShareExtension/Info.plist
       properties:
         CFBundleDisplayName: Open Pilot
-        CFBundleShortVersionString: "1.0.9"
-        CFBundleVersion: "10"
+        CFBundleShortVersionString: "1.0.10"
+        CFBundleVersion: "11"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.share-services
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController
@@ -128,8 +128,8 @@ targets:
       path: WidgetExtension/Info.plist
       properties:
         CFBundleDisplayName: Open Pilot
-        CFBundleShortVersionString: "1.0.9"
-        CFBundleVersion: "10"
+        CFBundleShortVersionString: "1.0.10"
+        CFBundleVersion: "11"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:
@@ -157,8 +157,8 @@ targets:
       path: KeyboardExtension/Info.plist
       properties:
         CFBundleDisplayName: Open Pilot
-        CFBundleShortVersionString: "1.0.9"
-        CFBundleVersion: "10"
+        CFBundleShortVersionString: "1.0.10"
+        CFBundleVersion: "11"
         NSExtension:
           NSExtensionAttributes:
             IsASCIICapable: false

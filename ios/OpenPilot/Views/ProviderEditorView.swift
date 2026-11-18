@@ -4,6 +4,7 @@ import UIKit
 
 struct ProviderEditorView: View {
     @Environment(\.modelContext) private var context
+    @AppStorage("showCostEstimates") private var showCostEstimates = true
     @Bindable var provider: ProviderConfig
     @State private var testing = false
     @State private var testResult: String?
@@ -193,7 +194,7 @@ struct ProviderEditorView: View {
             } footer: {
                 Text(T("Auto: Qwen/DashScope and OpenAI yes; a local text server no. Set Yes if your server generates images, No to warn when an image is requested.", "Auto: Qwen/DashScope y OpenAI sí; un server local de texto no. Pon «Sí» si tu servidor genera imágenes, «No» para avisar al pedir una imagen."))
             }
-            if provider.kind == "openai" || provider.kind == "anthropic" {
+            if showCostEstimates && (provider.kind == "openai" || provider.kind == "anthropic") {
                 Section {
                     Toggle(T("Custom pricing", "Precio personalizado"), isOn: $provider.pricingEnabled)
                         .onChange(of: provider.pricingEnabled) { _, _ in try? context.save() }

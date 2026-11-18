@@ -11,6 +11,7 @@ struct SettingsView: View {
     @AppStorage("responseStyle") private var responseStyle = "conciso"
     @AppStorage("appearanceMode") private var appearanceMode = "auto"
     @AppStorage("showUsageBadges") private var showUsageBadges = true
+    @AppStorage("showCostEstimates") private var showCostEstimates = true
     @AppStorage("accentColor") private var accentColor = "blue"
     @AppStorage("customInstructionsEnabled") private var ciEnabled = true
     @AppStorage("customAboutYou") private var ciAbout = ""
@@ -56,10 +57,14 @@ struct SettingsView: View {
                 }
                 .padding(.vertical, 2)
                 Toggle(T("Show usage & cost badges", "Mostrar consumo y coste"), isOn: $showUsageBadges)
+                Toggle(T("Show cost estimates", "Mostrar coste estimado"), isOn: $showCostEstimates)
             } header: {
                 Text(T("Appearance", "Apariencia"))
             } footer: {
-                Text(T("Follows your device setting by default.", "Sigue la configuración de tu dispositivo por defecto."))
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(T("Follows your device setting by default.", "Sigue la configuración de tu dispositivo por defecto."))
+                    Text(T("Turn off cost estimates if you use a subscription (e.g. Qwen Token Plan) instead of pay-per-token API.", "Apaga el coste estimado si usas una subscripción (ej. Qwen Token Plan) en vez de API por token."))
+                }
             }
 
             Section {

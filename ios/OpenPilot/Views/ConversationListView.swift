@@ -13,6 +13,7 @@ struct SidebarView: View {
     @Query(sort: \Project.createdAt) private var projects: [Project]
     @Query private var providers: [ProviderConfig]
     @AppStorage("showUsageBadges") private var showUsageBadges = true
+    @AppStorage("showCostEstimates") private var showCostEstimates = true
     @State private var search = ""
     @State private var sharePayload: SharePayload?
     @State private var renamingConv: Conversation?
@@ -291,6 +292,7 @@ struct SidebarView: View {
         let total = t.prompt + t.completion
         guard total > 0 else { return nil }
         let tokens = ConversationUsage.formatTokens(total) + " " + T("tok", "tok")
+        guard showCostEstimates else { return (tokens, "") }
         let cost: String
         if isLocalProvider(c.providerID) {
             cost = T("Local", "Local")

@@ -114,6 +114,10 @@ What makes it more than a clone: **live tokens/sec**, a **context-window gauge**
 - **Usage badge toggle** — show or hide the per-chat tokens & cost badges from Settings → Appearance.
 - **Per-provider pricing** — override the cost estimate per provider: manual $/million rates or auto-fetched from an OpenRouter-style endpoint, with an on/off switch.
 - **Deeper web browsing** — pick **Quick / Standard / Deep** in Settings → Web search. Deep pulls two result pages and reads up to 8 full pages, so answers are grounded in far more than a handful of snippets.
+- **Global cost switch** — one toggle (Settings → Appearance → *Show cost estimates*) hides every cost figure across the app. Turn it off when you're on a subscription instead of pay-per-token API.
+
+### New in 1.0.10
+- **Turn pricing off globally** — a new **Show cost estimates** toggle (Settings → Appearance) hides all cost figures: the sidebar badge cost, the turn inspector's *Estimated cost* row, the usage dashboard's cost card and per-provider costs, and the per-provider pricing editor. Token counts stay visible. Made for subscription users (e.g. Qwen Token Plan) where per-token cost estimates don't apply.
 
 ### New in 1.0.9
 - **A much stronger web browser** — fixed the primary search engine (DuckDuckGo Lite now requires **POST**; the old GET returned zero results) and added **pagination** for genuinely new results. Browse depth is now configurable: **Quick** (5 sources, reads 3), **Standard** (8 sources, reads 5) or **Deep** (2 result pages, up to 12 sources, reads 8 in full). No backend — the iPhone fetches everything directly.

@@ -7,6 +7,7 @@ struct TurnInspectorView: View {
     let message: Message
     @Environment(\.dismiss) private var dismiss
     @Query private var providers: [ProviderConfig]
+    @AppStorage("showCostEstimates") private var showCostEstimates = true
 
     private var totalTokens: Int { message.promptTokens + message.completionTokens }
 
@@ -46,7 +47,7 @@ struct TurnInspectorView: View {
                     row(T("Prompt tokens", "Tokens de entrada"), "↑ " + TurnInspector.formatCount(message.promptTokens))
                     row(T("Completion tokens", "Tokens de salida"), "↓ " + TurnInspector.formatCount(message.completionTokens))
                     row(T("Total tokens", "Tokens totales"), TurnInspector.formatCount(totalTokens))
-                    row(T("Estimated cost", "Coste estimado"), costLabel)
+                    if showCostEstimates { row(T("Estimated cost", "Coste estimado"), costLabel) }
                 } header: { Text(T("Tokens", "Tokens")) }
 
                 Section {

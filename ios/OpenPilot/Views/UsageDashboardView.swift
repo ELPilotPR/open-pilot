@@ -5,6 +5,7 @@ import Charts
 /// Dashboard de uso: tokens y coste estimado por proveedor, calculado 100% en el
 /// dispositivo a partir de los tokens que ya guarda cada respuesta. Sin red.
 struct UsageDashboardView: View {
+    @AppStorage("showCostEstimates") private var showCostEstimates = true
     @Query private var conversations: [Conversation]
     @Query(sort: \ProviderConfig.createdAt) private var providers: [ProviderConfig]
 
@@ -29,16 +30,21 @@ struct UsageDashboardView: View {
         List {
             Section {
                 HStack(spacing: 12) {
-                    statCard(title: T("Estimated cost", "Coste estimado"),
-                             value: String(format: "$%.2f", summary.totalCost), icon: "dollarsign.circle")
+                    if showCostEstimates {
+                        statCard(title: T("Estimated cost", "Coste estimado"),
+                                 value: String(format: "$%.2f", summary.totalCost), icon: "dollarsign.circle")
+                    }
                     statCard(title: T("Tokens", "Tokens"),
                              value: formatTokens(summary.totalTokens), icon: "number")
                 }
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
             } footer: {
-                Text(T("Estimates from public per-token rates. Models running on your own device or LAN count $0.",
-                       "Estimaciones con tarifas públicas por token. Los modelos en tu dispositivo o LAN cuentan $0."))
+                Text(showCostEstimates
+                     ? T("Estimates from public per-token rates. Models running on your own device or LAN count $0.",
+                         "Estimaciones con tarifas públicas por token. Los modelos en tu dispositivo o LAN cuentan $0.")
+                     : T("Cost estimates are hidden. Turn them on in Settings → Appearance.",
+                         "El coste estimado está oculto. Actívalo en Ajustes → Apariencia."))
             }
 
             Section {
@@ -96,7 +102,7 @@ struct UsageDashboardView: View {
             HStack {
                 Text(p.providerName).font(.headline).foregroundStyle(OP.textPrimary)
                 Spacer()
-                Text(String(format: "$%.2f", p.costUSD)).font(.subheadline.bold()).foregroundStyle(OP.accent)
+                if showCostEstimates { Text(String(format: "$%.2f", p.costUSD)).font(.subheadline.bold()).foregroundStyle(OP.accent) }
             }
             HStack(spacing: 12) {
                 Text("\(formatTokens(p.totalTokens)) tokens").font(.caption).foregroundStyle(OP.textSecondary)
