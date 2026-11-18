@@ -163,7 +163,7 @@ struct ChatView: View {
         .background(OP.canvas.ignoresSafeArea())
         .onAppear { runDemoIfNeeded(); consumeVoiceIntent(); consumeAskDeepLink() }
         .onChange(of: scenePhase) { _, p in if p == .active { consumeVoiceIntent(); consumeAskDeepLink() } }
-        .onChange(of: vm.isStreaming) { old, new in if old && !new { fireDeepLinkCallback() } }
+        .onChange(of: vm.isStreaming) { old, new in if old && !new { fireDeepLinkCallback(); if vm.errorText == nil { Haptic.soft() } } }
         .sheet(isPresented: $showPromptLibrary) { NavigationStack { PromptLibraryView() } }
         .sheet(isPresented: $showOutline) {
             ChatOutlineView(entries: ChatOutline.entries(messages)) { id in jumpToMessage(id) }

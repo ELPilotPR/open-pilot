@@ -18,4 +18,10 @@ enum TurnInspector {
     nonisolated static func formatCount(_ n: Int) -> String {
         n > 0 ? "\(n)" : "—"
     }
+
+    /// Coste estimado en USD: nil/≤0 → "—"; <0.01 → 4 decimales; resto 2.
+    nonisolated static func formatCost(_ usd: Double?) -> String {
+        guard let usd, usd > 0 else { return "—" }
+        return usd < 0.01 ? String(format: "$%.4f", usd) : String(format: "$%.2f", usd)
+    }
 }

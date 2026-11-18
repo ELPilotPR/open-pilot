@@ -43,4 +43,27 @@ final class TurnInspectorTests: XCTestCase {
         XCTAssertEqual(TurnInspector.formatCount(5), "5")
         XCTAssertEqual(TurnInspector.formatCount(1234), "1234")
     }
+
+    func testCostNilIsDash() {
+        XCTAssertEqual(TurnInspector.formatCost(nil), "—")
+    }
+
+    func testCostZeroOrNegativeIsDash() {
+        XCTAssertEqual(TurnInspector.formatCost(0), "—")
+        XCTAssertEqual(TurnInspector.formatCost(-1.5), "—")
+    }
+
+    func testCostSmallFourDecimals() {
+        XCTAssertEqual(TurnInspector.formatCost(0.0023), "$0.0023")
+        XCTAssertEqual(TurnInspector.formatCost(0.0002), "$0.0002")
+    }
+
+    func testCostLargeTwoDecimals() {
+        XCTAssertEqual(TurnInspector.formatCost(0.5), "$0.50")
+        XCTAssertEqual(TurnInspector.formatCost(1.234), "$1.23")
+    }
+
+    func testCostBoundary() {
+        XCTAssertEqual(TurnInspector.formatCost(0.01), "$0.01")
+    }
 }

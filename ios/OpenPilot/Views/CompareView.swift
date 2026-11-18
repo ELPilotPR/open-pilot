@@ -8,6 +8,9 @@ struct CompareView: View {
     @StateObject var compare: ModelCompare
     let providers: [ProviderConfig]
     @Environment(\.dismiss) private var dismiss
+    @State private var presets: [ModelCompare.Preset] = ModelCompare.loadPresets()
+    @State private var showSavePreset = false
+    @State private var presetName = ""
 
     var body: some View {
         NavigationStack {
@@ -23,8 +26,62 @@ struct CompareView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button { dismiss() } label: { Image(systemName: "xmark") }
                 }
+                ToolbarItem(placement: .primaryAction) { presetsMenu }
+            }
+            .alert(T("Save preset", "Guardar preset"), isPresented: $showSavePreset) {
+                TextField(T("Name", "Nombre"), text: $presetName)
+                Button(T("Save", "Guardar")) { saveCurrentPreset() }
+                Button(T("Cancel", "Cancelar"), role: .cancel) { }
+            } message: {
+                Text(T("Names this matchup so you can reload it later.", "Nombra este enfrentamiento para recargarlo luego."))
             }
         }
+    }
+
+    private var presetsMenu: some View {
+        Menu {
+            if presets.isEmpty {
+                Text(T("No saved presets", "Sin presets guardados"))
+            } else {
+                ForEach(presets) { p in
+                    Button { loadPreset(p) } label: { Label(p.name, systemImage: "rectangle.split.2x2") }
+                }
+                Divider()
+                Menu(T("Delete preset", "Borrar preset")) {
+                    ForEach(presets) { p in
+                        Button(role: .destructive) { deletePreset(p) } label: { Text(p.name) }
+                    }
+                }
+                Divider()
+            }
+            Button { presetName = ""; showSavePreset = true } label: {
+                Label(T("Save current…", "Guardar actual…"), systemImage: "plus")
+            }
+            .disabled(compare.columns.isEmpty)
+        } label: {
+            Image(systemName: "bookmark")
+        }
+        .accessibilityLabel(T("Presets", "Presets"))
+    }
+
+    private func loadPreset(_ p: ModelCompare.Preset) {
+        guard !compare.isRunning else { return }
+        compare.columns = ModelCompare.columns(from: p)
+        Haptic.selection()
+    }
+
+    private func saveCurrentPreset() {
+        let name = presetName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty, !compare.columns.isEmpty else { return }
+        let preset = ModelCompare.makePreset(name: name, columns: compare.columns)
+        presets = ModelCompare.upsert(preset, into: presets)
+        ModelCompare.savePresets(presets)
+        Haptic.light()
+    }
+
+    private func deletePreset(_ p: ModelCompare.Preset) {
+        presets = ModelCompare.remove(id: p.id, from: presets)
+        ModelCompare.savePresets(presets)
     }
 
     private var canRun: Bool {

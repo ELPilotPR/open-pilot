@@ -1,12 +1,29 @@
 import SwiftUI
+import SwiftData
 
 /// Hoja de evidencia por turno: modelo, tiempos (TTFT/total), tok/s, tokens
 /// prompt/completion, contenido y metadatos. Todo client-side, sin red.
 struct TurnInspectorView: View {
     let message: Message
     @Environment(\.dismiss) private var dismiss
+    @Query private var providers: [ProviderConfig]
 
     private var totalTokens: Int { message.promptTokens + message.completionTokens }
+
+    private var isLocalProvider: Bool {
+        guard let pid = message.conversation?.providerID,
+              let p = providers.first(where: { $0.id == pid }) else { return false }
+        return UsagePricing.isLocal(kind: p.kind, baseURL: p.baseURL)
+    }
+
+    private var costLabel: String {
+        if isLocalProvider { return T("Local (free)", "Local (gratis)") }
+        let cost = UsagePricing.costUSD(model: message.conversation?.model ?? "",
+                                        promptTokens: message.promptTokens,
+                                        completionTokens: message.completionTokens,
+                                        local: false)
+        return TurnInspector.formatCost(cost)
+    }
 
     var body: some View {
         NavigationStack {
@@ -27,6 +44,7 @@ struct TurnInspectorView: View {
                     row(T("Prompt tokens", "Tokens de entrada"), "↑ " + TurnInspector.formatCount(message.promptTokens))
                     row(T("Completion tokens", "Tokens de salida"), "↓ " + TurnInspector.formatCount(message.completionTokens))
                     row(T("Total tokens", "Tokens totales"), TurnInspector.formatCount(totalTokens))
+                    row(T("Estimated cost", "Coste estimado"), costLabel)
                 } header: { Text(T("Tokens", "Tokens")) }
 
                 Section {

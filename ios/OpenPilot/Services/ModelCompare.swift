@@ -204,4 +204,58 @@ final class ModelCompare: ObservableObject {
         let already = columns.first(where: { $0.id == id })?.isWinner ?? false
         for i in columns.indices { columns[i].isWinner = (columns[i].id == id) && !already }
     }
+
+    // MARK: - Presets (named matchups, stored locally)
+
+    /// Un enfrentamiento guardado: nombre + alineación de columnas (provider/model/label).
+    struct Preset: Codable, Identifiable, Equatable {
+        var id: UUID
+        var name: String
+        var columns: [Spec]
+        init(id: UUID = UUID(), name: String, columns: [Spec]) {
+            self.id = id; self.name = name; self.columns = columns
+        }
+        struct Spec: Codable, Equatable {
+            var providerID: String
+            var model: String
+            var label: String
+        }
+    }
+
+    nonisolated static let presetsKey = "comparePresets"
+
+    /// Fotografía la alineación actual en un preset con nombre.
+    nonisolated static func makePreset(name: String, columns: [Column]) -> Preset {
+        Preset(name: name, columns: columns.map {
+            Preset.Spec(providerID: $0.providerID, model: $0.model, label: $0.label)
+        })
+    }
+
+    /// Reconstruye columnas nuevas y ociosas desde un preset.
+    nonisolated static func columns(from preset: Preset) -> [Column] {
+        preset.columns.map { Column(providerID: $0.providerID, model: $0.model, label: $0.label) }
+    }
+
+    /// Inserta o reemplaza por id; el más nuevo primero; tope para mantener el menú limpio.
+    nonisolated static func upsert(_ preset: Preset, into presets: [Preset], limit: Int = 20) -> [Preset] {
+        var out = presets.filter { $0.id != preset.id }
+        out.insert(preset, at: 0)
+        return Array(out.prefix(limit))
+    }
+
+    nonisolated static func remove(id: UUID, from presets: [Preset]) -> [Preset] {
+        presets.filter { $0.id != id }
+    }
+
+    nonisolated static func loadPresets(_ defaults: UserDefaults = .standard) -> [Preset] {
+        guard let data = defaults.data(forKey: presetsKey),
+              let list = try? JSONDecoder().decode([Preset].self, from: data) else { return [] }
+        return list
+    }
+
+    nonisolated static func savePresets(_ presets: [Preset], _ defaults: UserDefaults = .standard) {
+        if let data = try? JSONEncoder().encode(presets) {
+            defaults.set(data, forKey: presetsKey)
+        }
+    }
 }
