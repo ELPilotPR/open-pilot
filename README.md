@@ -11,7 +11,7 @@
 [![Platform](https://img.shields.io/badge/platform-iOS%2018%2B-007aff)](https://developer.apple.com/ios/)
 [![Swift](https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white)](https://swift.org)
 [![SwiftUI](https://img.shields.io/badge/UI-SwiftUI-0071e3)](https://developer.apple.com/xcode/swiftui/)
-[![Tests](https://img.shields.io/badge/tests-628%20passing-2ea043)](ios/OpenPilotTests)
+[![Tests](https://img.shields.io/badge/tests-642%20passing-2ea043)](ios/OpenPilotTests)
 [![Backend](https://img.shields.io/badge/backend-none-2ea043)](#privacy--security)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-blueviolet)](#contributing)
 
@@ -113,6 +113,11 @@ What makes it more than a clone: **live tokens/sec**, a **context-window gauge**
 - **Full backup** — export every chat and provider setup to one portable JSON file and restore it on any device (replace or merge). API keys never leave the Keychain.
 - **Usage badge toggle** — show or hide the per-chat tokens & cost badges from Settings → Appearance.
 - **Per-provider pricing** — override the cost estimate per provider: manual $/million rates or auto-fetched from an OpenRouter-style endpoint, with an on/off switch.
+- **Deeper web browsing** — pick **Quick / Standard / Deep** in Settings → Web search. Deep pulls two result pages and reads up to 8 full pages, so answers are grounded in far more than a handful of snippets.
+
+### New in 1.0.9
+- **A much stronger web browser** — fixed the primary search engine (DuckDuckGo Lite now requires **POST**; the old GET returned zero results) and added **pagination** for genuinely new results. Browse depth is now configurable: **Quick** (5 sources, reads 3), **Standard** (8 sources, reads 5) or **Deep** (2 result pages, up to 12 sources, reads 8 in full). No backend — the iPhone fetches everything directly.
+- **642 tests passing** (was 628).
 
 ### New in 1.0.8
 - **Per-provider pricing** — each cloud provider gets a **Custom pricing** switch in its editor. Turn it on and pick **Manual** (type your real input/output $ per million tokens — e.g. your Qwen Token Plan) or **Auto (OpenRouter)** (fetch live rates from the provider's `/models` endpoint). Off = the built-in estimate. The override flows through the sidebar badges, the turn inspector and the usage dashboard.
@@ -207,7 +212,7 @@ ios/
     ViewModels/          chat orchestration
     Views/               SwiftUI screens (chat, canvas, compare, settings, onboarding…)
     Resources/           bundled mermaid.js (offline diagrams)
-  OpenPilotTests/        XCTest suite (628 tests)
+  OpenPilotTests/        XCTest suite (642 tests)
   ShareExtension/  WidgetExtension/  KeyboardExtension/   (App Group capabilities)
 docs/                    feature inventory, privacy policy, screenshots
 ```
@@ -220,7 +225,7 @@ Read the full [privacy policy](https://elpilotpr.github.io/open-pilot/privacy-po
 
 ## Testing
 
-An **XCTest suite (628 tests)** covers the version tree, model catalog, custom instructions, file/office parsing, citations, Canvas helpers, projects, memory, personas, feedback, temporary chat, in-conversation search, LaTeX parsing, export/import round-trips, prompt slash matching, JavaScript sandbox execution, CSV parsing, context compaction & budgeting, Canvas preview building, model-comparison logic & metrics (time-to-first-token, tok/s, tokens), N-way columns and winner selection, the chat outline, voice selection/barge-in logic, and web-search query cleaning & relevance ranking, and context-aware follow-up search queries.
+An **XCTest suite (642 tests)** covers the version tree, model catalog, custom instructions, file/office parsing, citations, Canvas helpers, projects, memory, personas, feedback, temporary chat, in-conversation search, LaTeX parsing, export/import round-trips, prompt slash matching, JavaScript sandbox execution, CSV parsing, context compaction & budgeting, Canvas preview building, model-comparison logic & metrics (time-to-first-token, tok/s, tokens), N-way columns and winner selection, the chat outline, voice selection/barge-in logic, and web-search query cleaning & relevance ranking, and context-aware follow-up search queries.
 
 ```bash
 cd ios

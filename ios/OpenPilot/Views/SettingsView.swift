@@ -18,6 +18,7 @@ struct SettingsView: View {
     @AppStorage("context.autoCompact") private var autoCompact = true
     @AppStorage("context.budget") private var contextBudget = 0
     @AppStorage("hapticsEnabled") private var hapticsEnabled = true
+    @AppStorage("browseDepth") private var browseDepth = "standard"
     @State private var showVoicePicker = false
     @State private var showIntro = false
     @State private var backupShare: SharePayload?
@@ -67,6 +68,18 @@ struct SettingsView: View {
                 Text(T("Feedback", "Feedback"))
             } footer: {
                 Text(T("Subtle vibrations when you send, copy, or react. Turn off if you prefer a quieter feel.", "Vibraciones sutiles al enviar, copiar o reaccionar. Desactívalo si prefieres un tacto más silencioso."))
+            }
+
+            Section {
+                Picker(T("Search depth", "Profundidad de búsqueda"), selection: $browseDepth) {
+                    Text(T("Quick", "Rápida")).tag("quick")
+                    Text(T("Standard", "Normal")).tag("standard")
+                    Text(T("Deep", "Profunda")).tag("deep")
+                }
+            } header: {
+                Text(T("Web search", "Búsqueda web"))
+            } footer: {
+                Text(T("How many pages the browser reads when browsing the web. Quick: 5 sources, reads 3. Standard: 8 sources, reads 5. Deep: 2 result pages, up to 12 sources, reads 8 in full.", "Cuántas páginas lee el navegador al buscar en la web. Rápida: 5 fuentes, lee 3. Normal: 8 fuentes, lee 5. Profunda: 2 páginas de resultados, hasta 12 fuentes, lee 8 completas."))
             }
 
             Section {

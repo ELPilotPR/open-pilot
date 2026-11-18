@@ -142,7 +142,9 @@ final class ChatViewModel: ObservableObject {
                 } else if browse {
                     self.statusText = T("Searching the web…", "Buscando en la web…")
                     let searchQuery = WebSearchService.contextualQuery(raw: userText, previousUserText: previousUserText, isFirstTurn: isFirstTurn)
-                    let sources = await WebSearchService.enriched(query: searchQuery, limit: 5)
+                    let depth = UserDefaults.standard.string(forKey: "browseDepth") ?? "standard"
+                    let dp = WebSearchService.depthParams(depth)
+                    let sources = await WebSearchService.enriched(query: searchQuery, limit: dp.limit, enrichTop: dp.enrichTop, maxChars: dp.maxChars, pages: dp.pages)
                     assistant.sources = sources
                     if sources.isEmpty {
                         self.statusText = T("No results; answering without sources…", "Sin resultados; respondo sin fuentes…")

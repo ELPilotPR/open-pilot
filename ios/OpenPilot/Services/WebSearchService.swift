@@ -25,11 +25,19 @@ enum WebSearchService {
     /// Busca en la web. Limpia la query, prueba DDG Lite y luego DDG HTML, y devuelve
     /// solo fuentes relevantes y deduplicadas por dominio. Nunca devuelve los
     /// `RelatedTopics` de desambiguacion del Instant Answer (eran paginas random).
-    static func search(query: String, limit: Int = 6) async throws -> [WebSource] {
+    static func search(query: String, limit: Int = 6, pages: Int = 1) async throws -> [WebSource] {
         let q = cleanQuery(query)
         var collected: [WebSource] = []
-        if let html = try? await fetchLite(query: q) {
-            collected = parseLite(html, limit: limit * 2)
+        var liteHTML = (try? await fetchLite(query: q)) ?? ""
+        collected = parseLite(liteHTML, limit: limit * 2)
+        var page = 1
+        while page < max(1, min(pages, 3)), collected.count < limit * 2,
+              let fields = nextFormFields(liteHTML) {
+            liteHTML = (try? await postLite(fields)) ?? ""
+            let more = parseLite(liteHTML, limit: limit * 2)
+            if more.isEmpty { break }
+            collected += more
+            page += 1
         }
         if collected.count < 2, let html = try? await fetchHTML(query: q) {
             collected += parseHTML(html, limit: limit * 2)
@@ -38,14 +46,15 @@ enum WebSearchService {
     }
 
     /// Busca y enriquece las top fuentes con el contenido real de la pagina.
-    static func enriched(query: String, limit: Int = 5) async -> [WebSource] {
-        var sources = (try? await search(query: query, limit: limit)) ?? []
-        let top = min(3, sources.count)
+    static func enriched(query: String, limit: Int = 8, enrichTop: Int = 5,
+                         maxChars: Int = 3500, pages: Int = 1) async -> [WebSource] {
+        var sources = (try? await search(query: query, limit: limit, pages: pages)) ?? []
+        let top = min(max(0, enrichTop), sources.count)
         if top > 0 {
             await withTaskGroup(of: (Int, String).self) { group in
                 for i in 0..<top {
                     let u = sources[i].url
-                    group.addTask { (i, await fetchPageText(u)) }
+                    group.addTask { (i, await fetchPageText(u, maxChars: maxChars)) }
                 }
                 for await (i, txt) in group {
                     if txt.count > 120 { sources[i].content = txt }
@@ -212,17 +221,61 @@ enum WebSearchService {
 
     // MARK: - DuckDuckGo Lite (primario)
 
+    /// DDG Lite exige POST: un GET devuelve solo el formulario de busqueda con
+    /// cero resultados (verificado nov 2026). La pagina 1 postea `q`; las
+    /// siguientes replican los campos ocultos de `next_form` (incl. el token
+    /// `vqd` de sesion) que devuelve la respuesta anterior, dando resultados nuevos.
     private static func fetchLite(query: String) async throws -> String {
-        var c = URLComponents(string: "https://lite.duckduckgo.com/lite/")!
-        c.queryItems = [URLQueryItem(name: "q", value: query)]
-        var req = URLRequest(url: c.url!)
+        try await postLite(["q": query])
+    }
+
+    private static func postLite(_ fields: [String: String]) async throws -> String {
+        var req = URLRequest(url: URL(string: "https://lite.duckduckgo.com/lite/")!)
+        req.httpMethod = "POST"
         req.timeoutInterval = 15
         req.setValue(ua, forHTTPHeaderField: "User-Agent")
+        req.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        req.httpBody = formEncode(fields).data(using: .utf8)
         let (data, resp) = try await URLSession.shared.data(for: req)
         guard let http = resp as? HTTPURLResponse, http.statusCode == 200 else {
             throw ProviderError.http((resp as? HTTPURLResponse)?.statusCode ?? -1, "duckduckgo-lite")
         }
         return String(data: data, encoding: .utf8) ?? ""
+    }
+
+    /// Cuerpo application/x-www-form-urlencoded (espacios -> `+`). Puro/testeable.
+    static func formEncode(_ fields: [String: String]) -> String {
+        let allowed = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~")
+        return fields.map { k, v in
+            let ek = (k.addingPercentEncoding(withAllowedCharacters: allowed) ?? k).replacingOccurrences(of: "%20", with: "+")
+            let ev = (v.addingPercentEncoding(withAllowedCharacters: allowed) ?? v).replacingOccurrences(of: "%20", with: "+")
+            return "\(ek)=\(ev)"
+        }.joined(separator: "&")
+    }
+
+    /// Campos ocultos del `next_form` de Lite (q, s, vqd, dc, …) para pedir la
+    /// pagina siguiente. nil si no hay next page. Puro/testeable.
+    static func nextFormFields(_ html: String) -> [String: String]? {
+        guard let form = matches(#"<form[^>]*class="next_form"[^>]*>.*?</form>"#, html).first?[0] else { return nil }
+        var fields: [String: String] = [:]
+        for input in matches(#"<input\b[^>]*>"#, form) {
+            let tag = input[0]
+            guard let name = matches(#"name=["']([^"']+)["']"#, tag).first?[1] else { continue }
+            let value = matches(#"value=["']([^"']*)["']"#, tag).first?[1] ?? ""
+            fields[name] = decodeEntities(value)
+        }
+        return fields.isEmpty ? nil : fields
+    }
+
+    /// Presets de profundidad de busqueda. quick = comportamiento clasico;
+    /// standard = mas fuentes y lectura mas profunda; deep = dos paginas de
+    /// resultados + el maximo de texto por pagina.
+    static func depthParams(_ depth: String) -> (limit: Int, enrichTop: Int, maxChars: Int, pages: Int) {
+        switch depth {
+        case "quick": return (5, 3, 2600, 1)
+        case "deep": return (12, 8, 4500, 2)
+        default: return (8, 5, 3500, 1)
+        }
     }
 
     /// Parsea DDG Lite: anchors `result-link` (URL directa, sin redirect uddg) +
