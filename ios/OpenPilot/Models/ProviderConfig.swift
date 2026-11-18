@@ -23,6 +23,15 @@ final class ProviderConfig {
     /// Ventana de contexto manual (tokens). 0 = automático (detectar del servidor
     /// o estimar por familia). Útil cuando el server no la reporta (p. ej. Strata).
     var contextWindow: Int = 0
+    /// Precio personalizado (override de la estimación integrada). Apagado = tabla.
+    var pricingEnabled: Bool = false
+    /// "manual" (tarifa fija) | "auto" (cache de OpenRouter /models).
+    var pricingMode: String = "manual"
+    /// Tarifas manuales en USD por millón de tokens (entrada / salida).
+    var pricingInput: Double = 0
+    var pricingOutput: Double = 0
+    /// Cache auto: JSON {modelID: [inputPerMillion, outputPerMillion]}.
+    var autoPricingJSON: String = ""
 
     /// API key protegida por el Keychain. Lee del Keychain y, si aún no se ha
     /// migrado, cae al valor legacy para no perder la clave existente.

@@ -15,10 +15,11 @@ struct UsageDashboardView: View {
             let prov = provByID[c.providerID]
             let name = prov?.name ?? c.providerID
             let local = UsagePricing.isLocal(kind: prov?.kind ?? "", baseURL: prov?.baseURL ?? "")
+            let override = prov.flatMap { ProviderPricing.resolve(enabled: $0.pricingEnabled, mode: $0.pricingMode, manualIn: $0.pricingInput, manualOut: $0.pricingOutput, autoJSON: $0.autoPricingJSON, model: c.model) }
             for m in c.messages where m.role == "assistant" && (m.promptTokens + m.completionTokens) > 0 {
                 samples.append(UsageSample(providerID: c.providerID, providerName: name, model: c.model,
                                            promptTokens: m.promptTokens, completionTokens: m.completionTokens,
-                                           date: m.createdAt, local: local))
+                                           date: m.createdAt, local: local, override: override))
             }
         }
         return UsageStats.summarize(samples)

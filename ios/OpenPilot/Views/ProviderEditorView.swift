@@ -14,6 +14,8 @@ struct ProviderEditorView: View {
     @State private var detectingContext = false
     @State private var contextStatus = ""
     @State private var modelStatus = ""
+    @State private var fetchingPricing = false
+    @State private var pricingStatus = ""
 
     var body: some View {
         Form {
@@ -191,6 +193,42 @@ struct ProviderEditorView: View {
             } footer: {
                 Text(T("Auto: Qwen/DashScope and OpenAI yes; a local text server no. Set Yes if your server generates images, No to warn when an image is requested.", "Auto: Qwen/DashScope y OpenAI sí; un server local de texto no. Pon «Sí» si tu servidor genera imágenes, «No» para avisar al pedir una imagen."))
             }
+            if provider.kind == "openai" || provider.kind == "anthropic" {
+                Section {
+                    Toggle(T("Custom pricing", "Precio personalizado"), isOn: $provider.pricingEnabled)
+                        .onChange(of: provider.pricingEnabled) { _, _ in try? context.save() }
+                    if provider.pricingEnabled {
+                        Picker(T("Mode", "Modo"), selection: $provider.pricingMode) {
+                            Text(T("Manual", "Manual")).tag("manual")
+                            Text(T("Auto (OpenRouter)", "Auto (OpenRouter)")).tag("auto")
+                        }
+                        .pickerStyle(.segmented)
+                        .onChange(of: provider.pricingMode) { _, _ in try? context.save() }
+                        if provider.pricingMode == "manual" {
+                            TextField(T("Input $ / million tokens", "Entrada $ / millón de tokens"), value: $provider.pricingInput, format: .number)
+                                .keyboardType(.decimalPad)
+                                .onChange(of: provider.pricingInput) { _, _ in try? context.save() }
+                            TextField(T("Output $ / million tokens", "Salida $ / millón de tokens"), value: $provider.pricingOutput, format: .number)
+                                .keyboardType(.decimalPad)
+                                .onChange(of: provider.pricingOutput) { _, _ in try? context.save() }
+                        } else {
+                            Button { fetchPricing() } label: {
+                                HStack {
+                                    Label(T("Fetch from OpenRouter", "Jalar de OpenRouter"), systemImage: "arrow.down.circle")
+                                    Spacer()
+                                    if fetchingPricing { ProgressView() }
+                                }
+                            }
+                            .disabled(fetchingPricing)
+                            if !pricingStatus.isEmpty { Text(pricingStatus).font(.caption).foregroundStyle(.secondary) }
+                        }
+                    }
+                } header: {
+                    Text(T("Pricing", "Precio"))
+                } footer: {
+                    Text(T("Override this provider's estimated cost. Manual: set your real $/million (e.g. your Qwen Token Plan). Auto: fetch live rates from an OpenRouter-style /models endpoint. Off = built-in estimate.", "Sobrescribe el coste estimado de este proveedor. Manual: pon tu $/millón real (ej. tu Token Plan de Qwen). Auto: jala tarifas en vivo de un endpoint /models tipo OpenRouter. Apagado = estimación integrada."))
+                }
+            }
         }
         .navigationTitle(provider.name)
         .navigationBarTitleDisplayMode(.inline)
@@ -302,6 +340,25 @@ struct ProviderEditorView: View {
                 contextStatus = T("This server doesn't report its context, so Open Pilot estimates it from the model name (shown in Effective context). Override it above if you know the exact max.", "Este servidor no reporta su contexto, así que Open Pilot lo estima por el nombre del modelo (lo ves en Contexto efectivo). Ponlo a mano arriba si conoces el máximo exacto.")
             }
             detectingContext = false
+        }
+    }
+
+    /// Jala tarifas en vivo de un endpoint /models tipo OpenRouter y las cachea.
+    private func fetchPricing() {
+        fetchingPricing = true
+        pricingStatus = T("Fetching…", "Jalando…")
+        let base = provider.baseURL
+        let key = provider.apiKey
+        Task { @MainActor in
+            do {
+                let rates = try await ProviderPricing.fetch(baseURL: base, apiKey: key)
+                provider.autoPricingJSON = ProviderPricing.encodeAuto(rates)
+                try? context.save()
+                pricingStatus = T("Fetched \(rates.count) model rates ✓", "Jaladas \(rates.count) tarifas ✓")
+            } catch {
+                pricingStatus = "Error: " + error.localizedDescription
+            }
+            fetchingPricing = false
         }
     }
 }

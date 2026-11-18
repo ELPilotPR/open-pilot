@@ -294,12 +294,20 @@ struct SidebarView: View {
         let cost: String
         if isLocalProvider(c.providerID) {
             cost = T("Local", "Local")
-        } else if let usd = ConversationUsage.estimatedCost(model: c.model, prompt: t.prompt, completion: t.completion) {
+        } else if let usd = ConversationUsage.estimatedCost(model: c.model, prompt: t.prompt, completion: t.completion, override: pricingOverride(for: c)) {
             cost = TurnInspector.formatCost(usd)
         } else {
             cost = ""
         }
         return (tokens, cost)
+    }
+
+    /// Override de precio del proveedor del chat (manual/auto). nil = tabla integrada.
+    private func pricingOverride(for c: Conversation) -> ModelRate? {
+        guard let p = providers.first(where: { $0.id == c.providerID }) else { return nil }
+        return ProviderPricing.resolve(enabled: p.pricingEnabled, mode: p.pricingMode,
+                                       manualIn: p.pricingInput, manualOut: p.pricingOutput,
+                                       autoJSON: p.autoPricingJSON, model: c.model)
     }
 
     private func isLocalProvider(_ pid: String) -> Bool {

@@ -26,9 +26,9 @@ enum UsagePricing {
         return ModelRate(inputPerMillion: 1, outputPerMillion: 3)   // genérico conservador
     }
 
-    static func costUSD(model: String, promptTokens: Int, completionTokens: Int, local: Bool = false) -> Double {
+    static func costUSD(model: String, promptTokens: Int, completionTokens: Int, local: Bool = false, override: ModelRate? = nil) -> Double {
         if local { return 0 }
-        let r = rate(for: model)
+        let r = override ?? rate(for: model)
         return Double(promptTokens) / 1_000_000 * r.inputPerMillion
              + Double(completionTokens) / 1_000_000 * r.outputPerMillion
     }
@@ -51,6 +51,7 @@ struct UsageSample {
     let completionTokens: Int
     let date: Date
     let local: Bool
+    var override: ModelRate? = nil
 }
 
 struct ProviderUsage: Identifiable, Equatable {
@@ -90,7 +91,7 @@ enum UsageStats {
         var cost = 0.0
         for s in samples {
             let cst = UsagePricing.costUSD(model: s.model, promptTokens: s.promptTokens,
-                                           completionTokens: s.completionTokens, local: s.local)
+                                           completionTokens: s.completionTokens, local: s.local, override: s.override)
             tp += s.promptTokens; tc += s.completionTokens; cost += cst; n += 1
             var e = provMap[s.providerID] ?? (s.providerName, 0, 0, 0, 0)
             e.name = s.providerName; e.p += s.promptTokens; e.c += s.completionTokens; e.cost += cst; e.n += 1

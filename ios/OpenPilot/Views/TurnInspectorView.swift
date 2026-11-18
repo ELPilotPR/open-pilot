@@ -18,10 +18,12 @@ struct TurnInspectorView: View {
 
     private var costLabel: String {
         if isLocalProvider { return T("Local (free)", "Local (gratis)") }
+        let prov = providers.first(where: { $0.id == message.conversation?.providerID })
+        let override = prov.flatMap { ProviderPricing.resolve(enabled: $0.pricingEnabled, mode: $0.pricingMode, manualIn: $0.pricingInput, manualOut: $0.pricingOutput, autoJSON: $0.autoPricingJSON, model: message.conversation?.model ?? "") }
         let cost = UsagePricing.costUSD(model: message.conversation?.model ?? "",
                                         promptTokens: message.promptTokens,
                                         completionTokens: message.completionTokens,
-                                        local: false)
+                                        local: false, override: override)
         return TurnInspector.formatCost(cost)
     }
 

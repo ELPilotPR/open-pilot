@@ -21,8 +21,8 @@ enum ConversationUsage {
 
     /// Coste estimado en USD para un modelo cloud; nil si no hay coste positivo
     /// (p. ej. cero tokens). Los proveedores locales se tratan aparte en la UI.
-    nonisolated static func estimatedCost(model: String, prompt: Int, completion: Int) -> Double? {
-        let usd = UsagePricing.costUSD(model: model, promptTokens: prompt, completionTokens: completion, local: false)
+    nonisolated static func estimatedCost(model: String, prompt: Int, completion: Int, override: ModelRate? = nil) -> Double? {
+        let usd = UsagePricing.costUSD(model: model, promptTokens: prompt, completionTokens: completion, local: false, override: override)
         return usd > 0 ? usd : nil
     }
 }
