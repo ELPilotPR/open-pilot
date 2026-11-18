@@ -11,7 +11,7 @@
 [![Platform](https://img.shields.io/badge/platform-iOS%2018%2B-007aff)](https://developer.apple.com/ios/)
 [![Swift](https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white)](https://swift.org)
 [![SwiftUI](https://img.shields.io/badge/UI-SwiftUI-0071e3)](https://developer.apple.com/xcode/swiftui/)
-[![Tests](https://img.shields.io/badge/tests-591%20passing-2ea043)](ios/OpenPilotTests)
+[![Tests](https://img.shields.io/badge/tests-601%20passing-2ea043)](ios/OpenPilotTests)
 [![Backend](https://img.shields.io/badge/backend-none-2ea043)](#privacy--security)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-blueviolet)](#contributing)
 
@@ -109,6 +109,12 @@ What makes it more than a clone: **live tokens/sec**, a **context-window gauge**
 - **Turn inspector** — per-reply evidence sheet: model, time-to-first-token, total time, tok/s, prompt/completion tokens, estimated cost, sources and metadata.
 - **Compare presets** — save named model matchups and reload them from the bookmark menu in the comparator.
 - **Conversation branching** — long-press any message and choose **Branch in new chat** to fork the active path up to that point into a fresh, independent chat; the original stays untouched.
+- **Usage badges** — each chat in the sidebar shows its total tokens and estimated cost (or **Local** for on-device/LAN models), with full VoiceOver labels.
+
+### New in 1.0.5
+- **Usage badges per chat** — the sidebar shows total tokens and estimated USD cost (or **Local**) under each conversation title, computed from the active path. Empty chats stay compact.
+- **Accessibility pass** — sidebar rows expose a combined VoiceOver label (title, pinned state, tokens, cost) with an "opens the conversation" hint; the clear-search button is labelled. Text uses scalable Dynamic Type styles.
+- **601 tests passing** (was 591).
 
 ### New in 1.0.4
 - **Branch in new chat** — fork a conversation from any message: the active path up to that message is copied into a new chat (reasoning, telemetry, attachments and feedback preserved), leaving the original intact. Available from the long-press menu on both your messages and replies.
@@ -186,7 +192,7 @@ ios/
     ViewModels/          chat orchestration
     Views/               SwiftUI screens (chat, canvas, compare, settings, onboarding…)
     Resources/           bundled mermaid.js (offline diagrams)
-  OpenPilotTests/        XCTest suite (591 tests)
+  OpenPilotTests/        XCTest suite (601 tests)
   ShareExtension/  WidgetExtension/  KeyboardExtension/   (App Group capabilities)
 docs/                    feature inventory, privacy policy, screenshots
 ```
@@ -199,7 +205,7 @@ Read the full [privacy policy](https://elpilotpr.github.io/open-pilot/privacy-po
 
 ## Testing
 
-An **XCTest suite (591 tests)** covers the version tree, model catalog, custom instructions, file/office parsing, citations, Canvas helpers, projects, memory, personas, feedback, temporary chat, in-conversation search, LaTeX parsing, export/import round-trips, prompt slash matching, JavaScript sandbox execution, CSV parsing, context compaction & budgeting, Canvas preview building, model-comparison logic & metrics (time-to-first-token, tok/s, tokens), N-way columns and winner selection, the chat outline, voice selection/barge-in logic, and web-search query cleaning & relevance ranking, and context-aware follow-up search queries.
+An **XCTest suite (601 tests)** covers the version tree, model catalog, custom instructions, file/office parsing, citations, Canvas helpers, projects, memory, personas, feedback, temporary chat, in-conversation search, LaTeX parsing, export/import round-trips, prompt slash matching, JavaScript sandbox execution, CSV parsing, context compaction & budgeting, Canvas preview building, model-comparison logic & metrics (time-to-first-token, tok/s, tokens), N-way columns and winner selection, the chat outline, voice selection/barge-in logic, and web-search query cleaning & relevance ranking, and context-aware follow-up search queries.
 
 ```bash
 cd ios

@@ -11,6 +11,7 @@ struct SidebarView: View {
     var onSettings: () -> Void
     @Query(sort: \Conversation.createdAt, order: .reverse) private var conversations: [Conversation]
     @Query(sort: \Project.createdAt) private var projects: [Project]
+    @Query private var providers: [ProviderConfig]
     @State private var search = ""
     @State private var sharePayload: SharePayload?
     @State private var renamingConv: Conversation?
@@ -67,6 +68,7 @@ struct SidebarView: View {
                     Button { search = "" } label: {
                         Image(systemName: "xmark.circle.fill").foregroundStyle(OP.textTertiary)
                     }
+                    .accessibilityLabel(T("Clear search", "Borrar búsqueda"))
                 }
                 Button { showGlobalSearch = true } label: {
                     Image(systemName: "text.magnifyingglass").foregroundStyle(OP.accent)
@@ -217,13 +219,25 @@ struct SidebarView: View {
 
     private func convRow(_ conv: Conversation) -> some View {
         Button { Haptic.selection(); current = conv; close() } label: {
-            HStack(spacing: 6) {
-                if conv.isPinned {
-                    Image(systemName: "pin.fill").font(.caption2).foregroundStyle(OP.textTertiary)
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    if conv.isPinned {
+                        Image(systemName: "pin.fill").font(.caption2).foregroundStyle(OP.textTertiary)
+                    }
+                    Text(conv.title.isEmpty ? T("New chat", "Nueva conversación") : conv.title)
+                        .lineLimit(1).font(.subheadline).foregroundStyle(OP.textPrimary)
+                    Spacer(minLength: 0)
                 }
-                Text(conv.title.isEmpty ? T("New chat", "Nueva conversación") : conv.title)
-                    .lineLimit(1).font(.subheadline).foregroundStyle(OP.textPrimary)
-                Spacer(minLength: 0)
+                if let badge = usageBadge(conv) {
+                    HStack(spacing: 5) {
+                        Text(badge.tokens)
+                        if !badge.cost.isEmpty {
+                            Text("·")
+                            Text(badge.cost)
+                        }
+                    }
+                    .font(.caption2).foregroundStyle(OP.textTertiary)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 12).padding(.vertical, 10)
@@ -231,6 +245,9 @@ struct SidebarView: View {
             .clipShape(RoundedRectangle(cornerRadius: 10))
         }
         .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(rowAccessibilityLabel(conv))
+        .accessibilityHint(T("Opens the conversation", "Abre la conversación"))
         .contextMenu {
             Button { togglePin(conv) } label: {
                 Label(conv.isPinned ? T("Unpin", "Desfijar") : T("Pin", "Fijar"),
@@ -265,6 +282,39 @@ struct SidebarView: View {
                 Label(T("Delete", "Eliminar"), systemImage: "trash")
             }
         }
+    }
+
+    /// Badge de uso (tokens + coste) de la ruta activa; nil si el chat no tiene tokens.
+    private func usageBadge(_ c: Conversation) -> (tokens: String, cost: String)? {
+        let t = ConversationUsage.totals(c.activeMessages)
+        let total = t.prompt + t.completion
+        guard total > 0 else { return nil }
+        let tokens = ConversationUsage.formatTokens(total) + " " + T("tok", "tok")
+        let cost: String
+        if isLocalProvider(c.providerID) {
+            cost = T("Local", "Local")
+        } else if let usd = ConversationUsage.estimatedCost(model: c.model, prompt: t.prompt, completion: t.completion) {
+            cost = TurnInspector.formatCost(usd)
+        } else {
+            cost = ""
+        }
+        return (tokens, cost)
+    }
+
+    private func isLocalProvider(_ pid: String) -> Bool {
+        guard let p = providers.first(where: { $0.id == pid }) else { return false }
+        return UsagePricing.isLocal(kind: p.kind, baseURL: p.baseURL)
+    }
+
+    /// Etiqueta VoiceOver de la fila: título + fijada + uso.
+    private func rowAccessibilityLabel(_ c: Conversation) -> String {
+        var parts = [c.title.isEmpty ? T("New chat", "Nueva conversación") : c.title]
+        if c.isPinned { parts.append(T("Pinned", "Fijada")) }
+        if let b = usageBadge(c) {
+            parts.append(b.tokens)
+            if !b.cost.isEmpty { parts.append(b.cost) }
+        }
+        return parts.joined(separator: ", ")
     }
 
     private func sectionHeader(_ title: String) -> some View {
