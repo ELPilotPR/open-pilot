@@ -11,7 +11,7 @@
 [![Platform](https://img.shields.io/badge/platform-iOS%2018%2B-007aff)](https://developer.apple.com/ios/)
 [![Swift](https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white)](https://swift.org)
 [![SwiftUI](https://img.shields.io/badge/UI-SwiftUI-0071e3)](https://developer.apple.com/xcode/swiftui/)
-[![Tests](https://img.shields.io/badge/tests-578%20passing-2ea043)](ios/OpenPilotTests)
+[![Tests](https://img.shields.io/badge/tests-591%20passing-2ea043)](ios/OpenPilotTests)
 [![Backend](https://img.shields.io/badge/backend-none-2ea043)](#privacy--security)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-blueviolet)](#contributing)
 
@@ -108,6 +108,11 @@ What makes it more than a clone: **live tokens/sec**, a **context-window gauge**
 - **Activity heatmap** — a year-long, GitHub-style grid of sessions and tokens per day in the Usage dashboard; toggle the metric and tap any day for details.
 - **Turn inspector** — per-reply evidence sheet: model, time-to-first-token, total time, tok/s, prompt/completion tokens, estimated cost, sources and metadata.
 - **Compare presets** — save named model matchups and reload them from the bookmark menu in the comparator.
+- **Conversation branching** — long-press any message and choose **Branch in new chat** to fork the active path up to that point into a fresh, independent chat; the original stays untouched.
+
+### New in 1.0.4
+- **Branch in new chat** — fork a conversation from any message: the active path up to that message is copied into a new chat (reasoning, telemetry, attachments and feedback preserved), leaving the original intact. Available from the long-press menu on both your messages and replies.
+- **591 tests passing** (was 578).
 
 ### New in 1.0.3
 - **Estimated cost per turn** — the turn inspector (ⓘ) now shows an estimated USD cost from the model's pricing, or **Local (free)** for on-device/LAN models.
@@ -181,7 +186,7 @@ ios/
     ViewModels/          chat orchestration
     Views/               SwiftUI screens (chat, canvas, compare, settings, onboarding…)
     Resources/           bundled mermaid.js (offline diagrams)
-  OpenPilotTests/        XCTest suite (578 tests)
+  OpenPilotTests/        XCTest suite (591 tests)
   ShareExtension/  WidgetExtension/  KeyboardExtension/   (App Group capabilities)
 docs/                    feature inventory, privacy policy, screenshots
 ```
@@ -194,7 +199,7 @@ Read the full [privacy policy](https://elpilotpr.github.io/open-pilot/privacy-po
 
 ## Testing
 
-An **XCTest suite (578 tests)** covers the version tree, model catalog, custom instructions, file/office parsing, citations, Canvas helpers, projects, memory, personas, feedback, temporary chat, in-conversation search, LaTeX parsing, export/import round-trips, prompt slash matching, JavaScript sandbox execution, CSV parsing, context compaction & budgeting, Canvas preview building, model-comparison logic & metrics (time-to-first-token, tok/s, tokens), N-way columns and winner selection, the chat outline, voice selection/barge-in logic, and web-search query cleaning & relevance ranking, and context-aware follow-up search queries.
+An **XCTest suite (591 tests)** covers the version tree, model catalog, custom instructions, file/office parsing, citations, Canvas helpers, projects, memory, personas, feedback, temporary chat, in-conversation search, LaTeX parsing, export/import round-trips, prompt slash matching, JavaScript sandbox execution, CSV parsing, context compaction & budgeting, Canvas preview building, model-comparison logic & metrics (time-to-first-token, tok/s, tokens), N-way columns and winner selection, the chat outline, voice selection/barge-in logic, and web-search query cleaning & relevance ranking, and context-aware follow-up search queries.
 
 ```bash
 cd ios

@@ -39,8 +39,8 @@ targets:
       path: OpenPilot/CoreInfo.plist
       properties:
         CFBundleDisplayName: Open Pilot
-        CFBundleShortVersionString: "1.0.3"
-        CFBundleVersion: "4"
+        CFBundleShortVersionString: "1.0.4"
+        CFBundleVersion: "5"
         ITSAppUsesNonExemptEncryption: false
         NSSupportsLiveActivities: true
         CFBundleURLTypes:

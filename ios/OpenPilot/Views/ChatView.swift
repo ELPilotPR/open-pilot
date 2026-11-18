@@ -906,6 +906,14 @@ struct ChatView: View {
         .onTapGesture { composerFocused = false }
     }
 
+    /// Bifurca la ruta activa hasta `m` en un chat nuevo y navega a él.
+    private func fork(from m: Message) {
+        guard let c = current, !vm.isStreaming else { return }
+        let new = ConversationFork.fork(c, upTo: m, into: context)
+        Haptic.success()
+        current = new
+    }
+
     // MARK: - Mensajes
 
     private var messageList: some View {
@@ -925,6 +933,7 @@ struct ChatView: View {
                                        onRegenerate: (!vm.isStreaming && !showSearch && m.role == "assistant" && idx == messages.count - 1) ? { regenerate() } : nil,
                                        onEdit: (!vm.isStreaming && !showSearch && m.role == "user") ? { startEdit(m) } : nil,
                                        onQuote: (!vm.isStreaming && !showSearch && !m.text.isEmpty) ? { quoteMessage(m) } : nil,
+                                       onFork: (!vm.isStreaming && !showSearch) ? { fork(from: m) } : nil,
                                        onContinue: (!vm.isStreaming && !showSearch && m.role == "assistant" && idx == messages.count - 1 && !m.text.isEmpty) ? { continueAnswer() } : nil,
                                        onVariation: (!vm.isStreaming && m.role == "assistant" && !m.imageData.isEmpty) ? {
                                            if let p = activeProvider, let c = current {

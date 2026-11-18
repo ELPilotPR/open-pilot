@@ -9,6 +9,7 @@ struct MessageRow: View {
     var onRegenerate: (() -> Void)? = nil
     var onEdit: (() -> Void)? = nil
     var onQuote: (() -> Void)? = nil
+    var onFork: (() -> Void)? = nil
     var onContinue: (() -> Void)? = nil
     var onVariation: (() -> Void)? = nil
     var onEditImage: (() -> Void)? = nil
@@ -76,6 +77,7 @@ struct MessageRow: View {
                         if let onQuote {
                             Button { onQuote() } label: { Label(T("Quote", "Citar"), systemImage: "text.quote") }
                         }
+                        forkButton
                     }
                     .accessibilityLabel(T("Your message", "Tu mensaje"))
                     .accessibilityHint(T("Tap to edit and resend", "Toca para editar y reenviar"))
@@ -99,6 +101,10 @@ struct MessageRow: View {
                     } else if !message.text.isEmpty {
                         MarkdownView(text: (isActive ? streamText : message.text) + (isActive ? " ▍" : ""), sources: message.sources)
                             .textSelection(.enabled)
+                            .contextMenu {
+                                Button { copyMessage() } label: { Label(T("Copy", "Copiar"), systemImage: "doc.on.doc") }
+                                forkButton
+                            }
                     }
                     if !message.sources.isEmpty { sourcesView }
                     HStack(spacing: 12) {
@@ -270,6 +276,13 @@ struct MessageRow: View {
         .foregroundStyle(OP.accent)
         .accessibilityLabel(T("Generating", "Generando") + ", " + LiveSpeed.label(liveTPS)
                             + (thermal.shouldWarn ? ", " + thermal.label : ""))
+    }
+
+    /// Acción "Bifurcar en chat nuevo" (nil mientras se genera o se busca).
+    @ViewBuilder private var forkButton: some View {
+        if let onFork {
+            Button { onFork() } label: { Label(T("Branch in new chat", "Bifurcar en chat nuevo"), systemImage: "arrow.triangle.branch") }
+        }
     }
 
     private func copyMessage() {
