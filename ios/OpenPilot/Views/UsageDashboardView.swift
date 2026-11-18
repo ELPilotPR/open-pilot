@@ -40,6 +40,16 @@ struct UsageDashboardView: View {
                        "Estimaciones con tarifas públicas por token. Los modelos en tu dispositivo o LAN cuentan $0."))
             }
 
+            Section {
+                ActivityHeatmapView(conversations: conversations)
+                    .padding(.vertical, 4)
+            } header: {
+                Text(T("Activity", "Actividad"))
+            } footer: {
+                Text(T("Each cell is a day; darker means more activity. Tap a day for details.",
+                       "Cada celda es un día; más oscuro = más actividad. Toca un día para ver el detalle."))
+            }
+
             if summary.totalTokens > 0 {
                 Section {
                     Chart(summary.byDay) { d in

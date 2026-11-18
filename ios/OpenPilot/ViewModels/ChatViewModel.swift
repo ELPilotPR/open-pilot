@@ -159,6 +159,7 @@ final class ChatViewModel: ObservableObject {
                 LiveActivityController.shared.start(title: conversation.title)
                 let genStart = Date()
                 var lastLive = genStart
+                var firstTokenAt: Date?
                 var usagePrompt = 0, usageCompletion = 0
                 self.liveTPS = 0
                 for try await ev in stream {
@@ -166,6 +167,7 @@ final class ChatViewModel: ObservableObject {
                     switch ev {
                     case .delta(let t):
                         assistant.text += t
+                        if firstTokenAt == nil { firstTokenAt = Date() }
                         LiveActivityController.shared.update(snippet: assistant.text)
                         let now = Date()
                         if now.timeIntervalSince(lastLive) >= 0.25 {
@@ -173,7 +175,7 @@ final class ChatViewModel: ObservableObject {
                             let tok = usageCompletion > 0 ? usageCompletion : LiveSpeed.estimateTokens(assistant.text)
                             self.liveTPS = LiveSpeed.tps(tokens: tok, elapsed: now.timeIntervalSince(genStart))
                         }
-                    case .reasoning(let r): assistant.reasoning += r
+                    case .reasoning(let r): assistant.reasoning += r; if firstTokenAt == nil { firstTokenAt = Date() }
                     case .usage(let p, let c): usagePrompt = p; usageCompletion = c
                     case .done: break
                     }
@@ -185,6 +187,8 @@ final class ChatViewModel: ObservableObject {
                 assistant.promptTokens = inTok
                 assistant.completionTokens = outTok
                 assistant.tokensPerSecond = elapsed > 0 ? Double(outTok) / elapsed : 0
+                assistant.ttft = firstTokenAt.map { $0.timeIntervalSince(genStart) }
+                assistant.elapsed = elapsed
                 if !assistant.sources.isEmpty {
                     assistant.citations = CitationReference.parse(text: assistant.text, sources: assistant.sources)
                 }
@@ -246,6 +250,7 @@ final class ChatViewModel: ObservableObject {
                 let stream = prov.stream(turns: turns, model: model, baseURL: cfg.baseURL, apiKey: cfg.apiKey)
                 let genStart = Date()
                 var lastLive = genStart
+                var firstTokenAt: Date?
                 var usagePrompt = 0, usageCompletion = 0
                 self.liveTPS = 0
                 for try await ev in stream {
@@ -253,6 +258,7 @@ final class ChatViewModel: ObservableObject {
                     switch ev {
                     case .delta(let t):
                         assistant.text += t
+                        if firstTokenAt == nil { firstTokenAt = Date() }
                         LiveActivityController.shared.update(snippet: assistant.text)
                         let now = Date()
                         if now.timeIntervalSince(lastLive) >= 0.25 {
@@ -260,7 +266,7 @@ final class ChatViewModel: ObservableObject {
                             let tok = usageCompletion > 0 ? usageCompletion : LiveSpeed.estimateTokens(assistant.text)
                             self.liveTPS = LiveSpeed.tps(tokens: tok, elapsed: now.timeIntervalSince(genStart))
                         }
-                    case .reasoning(let r): assistant.reasoning += r
+                    case .reasoning(let r): assistant.reasoning += r; if firstTokenAt == nil { firstTokenAt = Date() }
                     case .usage(let p, let c): usagePrompt = p; usageCompletion = c
                     case .done: break
                     }
@@ -272,6 +278,8 @@ final class ChatViewModel: ObservableObject {
                 assistant.promptTokens = inTok
                 assistant.completionTokens = outTok
                 assistant.tokensPerSecond = elapsed > 0 ? Double(outTok) / elapsed : 0
+                assistant.ttft = firstTokenAt.map { $0.timeIntervalSince(genStart) }
+                assistant.elapsed = elapsed
                 if isFirstTurn {
                     self.generateTitle(conversation: conversation, provider: cfg, context: context, firstUser: userText)
                 }
@@ -536,6 +544,7 @@ final class ChatViewModel: ObservableObject {
             turns.append(ChatTurn(role: "user", content: ContinueSupport.instruction))
             let genStart = Date()
             var lastLive = genStart
+            var firstTokenAt: Date?
             var usageCompletion = 0
             self.liveTPS = 0
             do {
@@ -544,13 +553,14 @@ final class ChatViewModel: ObservableObject {
                     switch ev {
                     case .delta(let t):
                         assistant.text += t
+                        if firstTokenAt == nil { firstTokenAt = Date() }
                         let now = Date()
                         if now.timeIntervalSince(lastLive) >= 0.25 {
                             lastLive = now
                             let tok = usageCompletion > 0 ? usageCompletion : LiveSpeed.estimateTokens(assistant.text)
                             self.liveTPS = LiveSpeed.tps(tokens: tok, elapsed: now.timeIntervalSince(genStart))
                         }
-                    case .reasoning(let r): assistant.reasoning += r
+                    case .reasoning(let r): assistant.reasoning += r; if firstTokenAt == nil { firstTokenAt = Date() }
                     case .usage(_, let c): usageCompletion = c
                     case .done: break
                     }
@@ -563,6 +573,8 @@ final class ChatViewModel: ObservableObject {
             let outTok = usageCompletion > 0 ? usageCompletion : max(1, assistant.text.count / 4)
             assistant.completionTokens = outTok
             assistant.tokensPerSecond = elapsed > 0 ? Double(outTok) / elapsed : 0
+            assistant.ttft = firstTokenAt.map { $0.timeIntervalSince(genStart) }
+            assistant.elapsed = elapsed
             try? context.save()
             self.isStreaming = false
         }

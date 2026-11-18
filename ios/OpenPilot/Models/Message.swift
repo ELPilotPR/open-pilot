@@ -17,6 +17,9 @@ final class Message {
     var promptTokens: Int = 0
     var completionTokens: Int = 0
     var tokensPerSecond: Double = 0
+    /// Time to first token (s) and total generation time (s); nil for legacy/imported turns.
+    var ttft: Double?
+    var elapsed: Double?
     var createdAt: Date
     var conversation: Conversation?
 

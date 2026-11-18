@@ -21,6 +21,7 @@ struct MessageRow: View {
     @State private var appeared = false
     @State private var reasoningExpanded = false
     @State private var sourcesExpanded = false
+    @State private var showInspector = false
     @State private var previewSource: WebSource?
     @State private var streamText = ""
     @State private var streamTask: Task<Void, Never>?
@@ -114,6 +115,7 @@ struct MessageRow: View {
                         if !message.text.isEmpty && !isActive { speakButton }
                         if !message.text.isEmpty && !isActive { copyButton }
                         if !message.text.isEmpty && !isActive { feedbackButtons }
+                        if !message.text.isEmpty && !isActive { inspectButton }
                     }
                 }
                 .onAppear { streamText = message.text }
@@ -292,6 +294,17 @@ struct MessageRow: View {
                 .accessibilityLabel(T("Copy", "Copiar"))
         }
         .buttonStyle(ScaleButtonStyle())
+    }
+
+    private var inspectButton: some View {
+        Button { showInspector = true; Haptic.light() } label: {
+            Image(systemName: "info.circle")
+                .font(.system(size: 13))
+                .foregroundStyle(OP.textSecondary)
+                .accessibilityLabel(T("Turn inspector", "Inspector de turno"))
+        }
+        .buttonStyle(ScaleButtonStyle())
+        .sheet(isPresented: $showInspector) { TurnInspectorView(message: message) }
     }
 
     private func regenerateButton(_ action: @escaping () -> Void) -> some View {

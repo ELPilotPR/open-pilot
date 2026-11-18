@@ -37,7 +37,6 @@ struct ChatView: View {
     @State private var canvasDoc: CanvasDocument?
     @State private var probingImage = false
     @ObservedObject private var voice = VoiceManager.shared
-    @StateObject private var live = LiveVoiceController()
     @State private var dictationPrefix = ""
     @State private var editingMessage: Message?
     @State private var editText = ""
@@ -235,20 +234,6 @@ struct ChatView: View {
             let code = note.userInfo?["code"] as? String ?? ""
             openCanvas(lang: lang, code: code)
         }
-        .onAppear {
-            live.sendUtterance = { text in
-                self.input = text
-                self.imageMode = false
-                self.send()
-            }
-        }
-        .onChange(of: vm.isStreaming) { _, streaming in
-            if !streaming && live.isActive && live.phase == .thinking {
-                let txt = messages.last(where: { $0.role == "assistant" })?.text ?? ""
-                live.assistantDidFinish(txt)
-            }
-        }
-        .overlay { if live.isActive { liveOverlay } }
         .sheet(isPresented: $demoCI) {
             NavigationStack { CustomInstructionsView() }
         }
@@ -256,12 +241,12 @@ struct ChatView: View {
 
     /// Hook de verificación visual (SOLO con argumento -demoWeather/-demoCurrency al
     /// lanzar). No afecta el uso normal: envía una consulta demo para ver la tarjeta.
-    /// Consume la intent de voz (Siri/Shortcuts): arranca el modo voz en vivo.
+    /// Consume la intent de voz (Siri/Shortcuts): arranca el dictado por micrófono.
     private func consumeVoiceIntent() {
         let d = UserDefaults.standard
         guard d.bool(forKey: IntentSupport.voiceFlag) else { return }
         d.removeObject(forKey: IntentSupport.voiceFlag)
-        if !live.isActive { live.start() }
+        if !voice.isListening { voice.toggleDictation() }
     }
 
     /// Deep link openpilot://ask?text=…: abre un chat nuevo y envía la pregunta.
@@ -305,7 +290,6 @@ struct ChatView: View {
         if args.contains("-demoVersions") { demoVersions(startVersion: args.contains("-v1") ? 1 : 2); return }
         if args.contains("-demoFile") { demoFile(); return }
         if args.contains("-demoCanvas") { demoCanvas(); return }
-        if args.contains("-demoLive") { demoLive(); return }
         if args.contains("-demoTemporary") { demoTemporary(); return }
         if args.contains("-demoSearch") { demoSearch(); return }
         if args.contains("-demoMath") { demoMath(); return }
@@ -524,17 +508,6 @@ struct ChatView: View {
             doc.versions = [v1, v2]
             doc.versionIndex = 1
             canvasDoc = doc
-        }
-    }
-
-    /// Demo OFFLINE del overlay de voz en vivo (sin tocar el micrófono): siembra
-    /// el estado de escucha para verificar la UI a pantalla completa.
-    private func demoLive() {
-        Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 500_000_000)
-            live.isActive = true
-            live.phase = .listening
-            live.heard = "¿Qué tiempo hace hoy en Madrid?"
         }
     }
 
@@ -1384,20 +1357,6 @@ struct ChatView: View {
                         .accessibilityLabel(T("Dictate", "Dictar"))
                 }
                 .buttonStyle(ScaleButtonStyle())
-                Button {
-                    if live.isActive { live.stop() } else { live.start() }
-                    Haptic.selection()
-                } label: {
-                    Image(systemName: "waveform")
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundStyle(live.isActive ? OP.accent : OP.textPrimary)
-                        .frame(width: 34, height: 34)
-                        .background(live.isActive ? OP.accent.opacity(0.15) : Color.clear)
-                        .clipShape(Circle())
-                        .symbolEffect(.pulse, options: .repeating, isActive: live.isActive)
-                        .accessibilityLabel(T("Live voice", "Voz en vivo"))
-                }
-                .buttonStyle(ScaleButtonStyle())
             }
                 Spacer(minLength: 0)
             if vm.isStreaming {
@@ -1566,52 +1525,6 @@ struct ChatView: View {
         let lang = ns.substring(with: m.range(at: 1)).trimmingCharacters(in: .whitespaces)
         let code = ns.substring(with: m.range(at: 2)).trimmingCharacters(in: .newlines)
         return (lang, code)
-    }
-
-    /// Overlay a pantalla completa del modo voz en vivo: fase actual, lo que se
-    /// oye y un botón grande para terminar.
-    private var liveOverlay: some View {
-        ZStack {
-            Color.black.opacity(0.88).ignoresSafeArea()
-            VStack(spacing: 22) {
-                Spacer()
-                Image(systemName: live.phase == .listening ? "waveform" : (live.phase == .thinking ? "brain" : "speaker.wave.2.fill"))
-                    .font(.system(size: 56))
-                    .foregroundStyle(OP.accent)
-                    .symbolEffect(.pulse, options: .repeating, isActive: live.phase != .idle)
-                Text(livePhaseLabel).font(.title3.weight(.semibold)).foregroundStyle(.white)
-                Text(live.heard.isEmpty ? "…" : live.heard)
-                    .font(.body).foregroundStyle(.white.opacity(0.8))
-                    .multilineTextAlignment(.center).padding(.horizontal, 32).lineLimit(6)
-                if let ve = voice.voiceError {
-                    Text(ve).font(.footnote).foregroundStyle(.orange)
-                        .multilineTextAlignment(.center).padding(.horizontal, 32)
-                }
-                LanguageToggle(compact: true)
-                    .accessibilityLabel(T("Spoken language", "Idioma hablado"))
-                Spacer()
-                Button { live.stop() } label: {
-                    Image(systemName: "xmark").font(.system(size: 22, weight: .bold))
-                        .foregroundStyle(.white).frame(width: 64, height: 64)
-                        .background(Color.red.opacity(0.85)).clipShape(Circle())
-                }
-                .accessibilityLabel(T("End live voice", "Terminar voz en vivo"))
-                Text(T("Tap to end", "Toca para terminar")).font(.caption).foregroundStyle(.white.opacity(0.6))
-                Spacer().frame(height: 40)
-            }
-        }
-        .onChange(of: LanguageManager.shared.current) { _, _ in
-            if live.isActive && live.phase == .listening { live.restartListening() }
-        }
-    }
-
-    private var livePhaseLabel: String {
-        switch live.phase {
-        case .listening: return T("Listening…", "Escuchando…")
-        case .thinking: return T("Thinking…", "Pensando…")
-        case .speaking: return T("Speaking…", "Hablando…")
-        case .idle: return ""
-        }
     }
 
     /// Navega a otra versión (rama hermana) del mensaje, sin perder las demás.

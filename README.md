@@ -11,7 +11,7 @@
 [![Platform](https://img.shields.io/badge/platform-iOS%2018%2B-007aff)](https://developer.apple.com/ios/)
 [![Swift](https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white)](https://swift.org)
 [![SwiftUI](https://img.shields.io/badge/UI-SwiftUI-0071e3)](https://developer.apple.com/xcode/swiftui/)
-[![Tests](https://img.shields.io/badge/tests-544%20passing-2ea043)](ios/OpenPilotTests)
+[![Tests](https://img.shields.io/badge/tests-565%20passing-2ea043)](ios/OpenPilotTests)
 [![Backend](https://img.shields.io/badge/backend-none-2ea043)](#privacy--security)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-blueviolet)](#contributing)
 
@@ -51,7 +51,7 @@ What makes it more than a clone: **live tokens/sec**, a **context-window gauge**
 - ⚡ **See the engine.** Live **tokens/sec** and token counts on every reply, plus a **context gauge** that detects/scales to the model's window (manual override up to 512k+) and **auto-compacts** old turns when you near the budget.
 - 🧠 **Reasoning you can read.** Models that "think" get a collapsible trace with **its own scroll**, so you can follow the thought without losing your place in the chat.
 - 🎭 **Personas.** Named response presets (built-in + your own) prepended to the system prompt — switch the assistant's voice in a tap.
-- 🛠️ **A real harness, not a wrapper.** On-device code interpreter, Canvas with versions + live preview, deep research, model comparison, voice mode with barge-in — all client-side.
+- 🛠️ **A real harness, not a wrapper.** On-device code interpreter, Canvas with versions + live preview, deep research, model comparison, dictation + read-aloud — all client-side.
 
 ## Features
 
@@ -84,7 +84,6 @@ What makes it more than a clone: **live tokens/sec**, a **context-window gauge**
 
 ### Voice
 - **Dictation** in English or Spanish (follows the app language; on-device recognition when available); **read replies aloud** with a pickable device voice.
-- **Live voice mode** — continuous hands-free listen → reply → listen with **barge-in** (interrupt by speaking) and a **live audio spectrum**.
 
 ### Attachments
 - Photos from library or camera, plus **files** extracted into context: **PDF, .docx, .xlsx**, Markdown, code, CSV, JSON, XML, YAML, RTF and plain text — parsed on-device.
@@ -106,13 +105,21 @@ What makes it more than a clone: **live tokens/sec**, a **context-window gauge**
 - **English / Español** (follows device, manual override); **Automatic / Light / Dark**.
 - **iPad & Mac ready** — two-column split view, keyboard shortcuts (⌘N, ⌘Return, ⌘F, ⌘B, ⌘,).
 - **First-run onboarding**, haptics, and a native, fluid SwiftUI interface.
+- **Activity heatmap** — a year-long, GitHub-style grid of sessions and tokens per day in the Usage dashboard; toggle the metric and tap any day for details.
+- **Turn inspector** — per-reply evidence sheet: model, time-to-first-token, total time, tok/s, prompt/completion tokens, sources and metadata.
+
+### New in 1.0.2
+- **Live voice mode removed** — the continuous hands-free listen → reply → listen loop proved unreliable, so it is gone. **Dictation (EN/ES) and read-aloud (TTS) stay**, and the Siri/Shortcuts voice intent now starts dictation.
+- **Activity heatmap** — sessions/tokens per day over the last year in the Usage dashboard, with a metric toggle and per-day detail on tap.
+- **Turn inspector** — tap the ⓘ on any reply for time-to-first-token, total generation time, tok/s, prompt/completion tokens, content stats and metadata; timing is captured live during streaming.
+- **565 tests passing** (was 544).
 
 ### Fixes in 1.0.1
 - **Web search relevance on follow-ups** — the first search in a chat worked, but later "search the same / another thing" turns searched the bare message and returned unrelated pages. Queries now resolve against the conversation topic (anaphora like "the same" reuses the prior query; short follow-ups are augmented with it), and social/image boards (Pinterest, Instagram, Facebook, TikTok, X) are filtered out.
 - **Generation no longer stops when you leave the app** — a background-task assertion keeps the stream alive for iOS's background grace period and the SSE session uses extended background idle mode, so switching apps mid-answer no longer interrupts it immediately. (iOS still caps total background time; very long answers may pause once the window expires.)
 - **Real context-window auto-detection** — per-model catalog plus an active server probe (the **Detect from server** button) reads the true window from OpenAI-compatible servers, including Qwen Cloud's 1M.
 - **Model comparison upgraded** — columns now show time-to-first-token, total time, average tok/s and prompt/completion token counts (fastest highlighted); add/remove columns to compare N models, crown a winner, and read each model's reasoning. All on-device, no backend.
-- **Voice mode works in English and Spanish** — dictation now follows the app language instead of a fixed Spanish recognizer, recognition no longer fails silently when the on-device language asset is missing, errors are shown in the voice overlay, and the listen loop no longer spins without feedback. A language toggle in the overlay switches the spoken language on the fly.
+- **Dictation works in English and Spanish** — recognition follows the app language instead of a fixed Spanish recognizer and no longer fails silently when the on-device language asset is missing.
 
 ## Providers
 
@@ -167,7 +174,7 @@ ios/
     ViewModels/          chat orchestration
     Views/               SwiftUI screens (chat, canvas, compare, settings, onboarding…)
     Resources/           bundled mermaid.js (offline diagrams)
-  OpenPilotTests/        XCTest suite (544 tests)
+  OpenPilotTests/        XCTest suite (565 tests)
   ShareExtension/  WidgetExtension/  KeyboardExtension/   (App Group capabilities)
 docs/                    feature inventory, privacy policy, screenshots
 ```
@@ -180,7 +187,7 @@ Read the full [privacy policy](https://elpilotpr.github.io/open-pilot/privacy-po
 
 ## Testing
 
-An **XCTest suite (544 tests)** covers the version tree, model catalog, custom instructions, file/office parsing, citations, Canvas helpers, projects, memory, personas, feedback, temporary chat, in-conversation search, LaTeX parsing, export/import round-trips, prompt slash matching, JavaScript sandbox execution, CSV parsing, context compaction & budgeting, Canvas preview building, model-comparison logic & metrics (time-to-first-token, tok/s, tokens), N-way columns and winner selection, the chat outline, voice selection/barge-in logic, and web-search query cleaning & relevance ranking, and context-aware follow-up search queries.
+An **XCTest suite (565 tests)** covers the version tree, model catalog, custom instructions, file/office parsing, citations, Canvas helpers, projects, memory, personas, feedback, temporary chat, in-conversation search, LaTeX parsing, export/import round-trips, prompt slash matching, JavaScript sandbox execution, CSV parsing, context compaction & budgeting, Canvas preview building, model-comparison logic & metrics (time-to-first-token, tok/s, tokens), N-way columns and winner selection, the chat outline, voice selection/barge-in logic, and web-search query cleaning & relevance ranking, and context-aware follow-up search queries.
 
 ```bash
 cd ios
@@ -198,7 +205,7 @@ xcodebuild test -project OpenPilot.xcodeproj -scheme OpenPilot \
 - [x] Canvas (versions) + live HTML/JS preview + offline Mermaid; on-device code interpreter + CSV charts
 - [x] Side-by-side model comparison; deep research; image editing & variations
 - [x] Personas, custom instructions, projects + automatic memory (+ Dream), prompt library / slash commands
-- [x] Voice picker + barge-in + live spectrum; live hands-free voice mode
+- [x] Voice picker + barge-in; dictation (EN/ES) + read replies aloud
 - [x] On-device model (FoundationModels) + offline GGUF (llama.cpp)
 - [x] Office attachments (.docx/.xlsx), first-run onboarding, i18n (EN/ES), Light/Dark, Keychain keys
 - [x] Share extension, Siri & Shortcuts, iPad/Mac split view + shortcuts, automated XCTest suite
